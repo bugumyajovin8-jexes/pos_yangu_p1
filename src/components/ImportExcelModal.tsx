@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { X, Upload, FileSpreadsheet, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { db, recordAuditLog } from '../db';
 import { useStore } from '../store';
+import { TranslationKey } from '../translations';
 import { SyncService } from '../services/sync';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -34,20 +35,21 @@ interface ImportReport {
 }
 
 const APP_FIELDS_BASE = [
-  { key: 'name', label: 'Jina la Bidhaa', required: true },
-  { key: 'buy_price', label: 'Bei ya Kununua', required: true, type: 'number' },
-  { key: 'sell_price', label: 'Bei ya Kuuza', required: true, type: 'number' },
-  { key: 'stock', label: 'Idadi ya Stock', required: true, type: 'number' },
-  { key: 'min_stock', label: 'Tahadhari ya Stock (Min)', required: true, type: 'number' },
+  { key: 'name', label: 'productName' as TranslationKey, required: true },
+  { key: 'buy_price', label: 'buyPrice' as TranslationKey, required: true, type: 'number' },
+  { key: 'sell_price', label: 'sellPrice' as TranslationKey, required: true, type: 'number' },
+  { key: 'stock', label: 'stock' as TranslationKey, required: true, type: 'number' },
+  { key: 'min_stock', label: 'minStockAlert' as TranslationKey, required: true, type: 'number' },
 ];
 
 const EXPIRY_FIELDS = [
-  { key: 'expiry_date', label: 'Tarehe ya Kuisha (Expiry)', required: false, type: 'date' },
-  { key: 'notify_expiry_days', label: 'Siku za Taarifa (Expiry Notify)', required: false, type: 'number' },
+  { key: 'expiry_date', label: 'expiryDate' as TranslationKey, required: false, type: 'date' },
+  { key: 'notify_expiry_days', label: 'notifyExpiryDays' as TranslationKey, required: false, type: 'number' },
 ];
 
 export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalProps) {
   const user = useStore(state => state.user);
+  const t = useStore(state => state.t);
   const [shopSettings, setShopSettings] = useState<any>(null);
   const [step, setStep] = useState<'upload' | 'mapping' | 'settings' | 'importing' | 'report'>('upload');
   const [excelHeaders, setExcelHeaders] = useState<string[]>([]);
@@ -89,7 +91,7 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
         
         if (data.length < 2) {
-          setError('File haina data za kutosha.');
+          setError(t('fileNotEnoughData'));
           return;
         }
 
@@ -102,8 +104,9 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
         // Initial mapping attempt
         const initialMappings: Record<string, Mapping> = {};
         appFields.forEach(field => {
+          const fieldLabel = t(field.label);
           const match = headers.find(h => 
-            h.toLowerCase().includes(field.label.toLowerCase()) || 
+            h.toLowerCase().includes(fieldLabel.toLowerCase()) || 
             h.toLowerCase().includes(field.key.toLowerCase())
           );
           initialMappings[field.key] = {
@@ -118,7 +121,7 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
         setStep('mapping');
         setError(null);
       } catch (err) {
-        setError('Imeshindwa kusoma file la Excel.');
+        setError(t('failedToReadExcel'));
         console.error(err);
       }
     };
@@ -194,14 +197,14 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
       // 1. Validation: Name is mandatory
       if (!rowData.name || String(rowData.name).trim() === '') {
         isRowValid = false;
-        rejectionReason = 'Jina la Bidhaa limekosekana';
+        rejectionReason = t('missingNameError');
       }
 
       // 2. Validation: Buy Price
       if (rowData.buy_price === null || isNaN(rowData.buy_price)) {
         if (settings.handleMissingBuyPrice === 'reject') {
           isRowValid = false;
-          rejectionReason = 'Bei ya Kununua imekosekana';
+          rejectionReason = t('missingBuyPriceError');
         } else {
           rowData.buy_price = 0;
         }
@@ -211,7 +214,7 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
       if (rowData.sell_price === null || isNaN(rowData.sell_price)) {
         if (settings.handleMissingSellPrice === 'reject') {
           isRowValid = false;
-          rejectionReason = 'Bei ya Kuuza imekosekana';
+          rejectionReason = t('missingSellPriceError');
         } else {
           rowData.sell_price = 0;
         }
@@ -316,7 +319,7 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
       });
       setStep('report');
     } catch (err) {
-      setError('Imeshindwa kuhifadhi data kwenye database. Mchakato umesitishwa na kurudishwa nyuma (rolled back).');
+      setError(t('failedToSaveToDb'));
       setStep('mapping');
       console.error(err);
     }
@@ -341,8 +344,8 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
               <FileSpreadsheet className="w-6 h-6 text-emerald-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Ingiza Bidhaa (Excel)</h2>
-              <p className="text-xs text-slate-500">Pakia file lako la Excel ili kuingiza bidhaa nyingi kwa pamoja</p>
+              <h2 className="text-xl font-bold text-slate-900">{t('importProductsExcel')}</h2>
+              <p className="text-xs text-slate-500">{t('importExcelDesc')}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
@@ -374,9 +377,9 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
               <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <Upload className="w-10 h-10 text-slate-400 group-hover:text-blue-600" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Chagua File la Excel</h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">{t('chooseExcelFile')}</h3>
               <p className="text-slate-500 text-sm max-w-xs mx-auto">
-                Bofya hapa au buruta file lako la .xlsx au .xls ili kuanza mchakato wa kuingiza bidhaa.
+                {t('chooseExcelFileDesc')}
               </p>
             </div>
           )}
@@ -385,8 +388,8 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
             <div className="space-y-6">
               <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
                 <p className="text-sm text-blue-700 font-medium">
-                  Tumepata bidhaa <span className="font-bold">{excelData.length}</span> kwenye file lako. 
-                  Tafadhali linganisha vichwa vya habari (Headers) vya Excel na sehemu za app.
+                  {t('foundProducts').replace('{count}', excelData.length.toString())} 
+                  {t('matchHeaders')}
                 </p>
               </div>
 
@@ -395,9 +398,9 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
                   <div key={field.key} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
                       <label className="block text-sm font-bold text-slate-700">
-                        {field.label} {field.required && <span className="text-rose-500">*</span>}
+                        {t(field.label)} {field.required && <span className="text-rose-500">*</span>}
                       </label>
-                      <p className="text-[10px] text-slate-400">Sehemu ya app</p>
+                      <p className="text-[10px] text-slate-400">{t('appFieldLabel')}</p>
                     </div>
                     <div className="space-y-2">
                       <select 
@@ -405,17 +408,17 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
                         onChange={(e) => handleMappingChange(field.key, e.target.value)}
                         className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       >
-                        <option value="__manual__">-- Jaza Mwenyewe Baadaye (Unique) --</option>
+                        <option value="__manual__">{t('manualFill')}</option>
                         {excelHeaders.map(h => (
                           <option key={h} value={h}>{h}</option>
                         ))}
-                        <option value="__constant__">+ Weka Thamani Moja (Constant)</option>
+                        <option value="__constant__">{t('setConstantValue')}</option>
                       </select>
 
                       {mappings[field.key]?.isConstant && (
                         <input 
                           type={field.type === 'number' ? 'number' : 'text'}
-                          placeholder={`Weka ${field.label.toLowerCase()}...`}
+                          placeholder={t('enterValue').replace('{field}', t(field.label).toLowerCase())}
                           value={mappings[field.key]?.constantValue}
                           onChange={(e) => handleConstantValueChange(field.key, e.target.value)}
                           className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -449,8 +452,8 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
                   <span className="text-2xl font-bold text-slate-900">{importProgress}%</span>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Inapakia Data...</h3>
-              <p className="text-slate-500">Tafadhali usifunge dirisha hili wakati bidhaa zinaingizwa.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('importingData')}</h3>
+              <p className="text-slate-500">{t('dontCloseWindow')}</p>
             </div>
           )}
 
@@ -458,56 +461,56 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
             <div className="space-y-8">
               <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100">
                 <h3 className="font-bold text-blue-900 mb-2 flex items-center">
-                  <AlertCircle className="w-5 h-5 mr-2" /> Mwongozo wa Usafishaji Data
+                  <AlertCircle className="w-5 h-5 mr-2" /> {t('dataCleaningGuide')}
                 </h3>
                 <ul className="text-sm text-blue-700 space-y-2 list-disc pl-5">
-                  <li>Bidhaa zisizo na <strong>Jina</strong> zitakataliwa moja kwa moja.</li>
-                  <li>Bidhaa zinazofanana (Jina, Bei, Expiry) zitaunganishwa kuwa moja.</li>
-                  <li>Mfumo unaweza kuhimili hadi bidhaa 50,000 kwa ufanisi.</li>
+                  <li>{t('dataCleaningRule1')}</li>
+                  <li>{t('dataCleaningRule2')}</li>
+                  <li>{t('dataCleaningRule3')}</li>
                 </ul>
               </div>
 
               <div className="space-y-6">
                 <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200">
-                  <label className="block text-sm font-bold text-slate-700 mb-4">Ikiwa Bei ya Kununua haipo:</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-4">{t('ifBuyPriceMissing')}</label>
                   <div className="grid grid-cols-2 gap-4">
                     <button 
                       onClick={() => setSettings(s => ({ ...s, handleMissingBuyPrice: 'reject' }))}
                       className={`p-4 rounded-2xl border-2 font-bold transition-all ${settings.handleMissingBuyPrice === 'reject' ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-200 bg-white text-slate-500'}`}
                     >
-                      Kataa Row (Reject)
+                      {t('rejectRow')}
                     </button>
                     <button 
                       onClick={() => setSettings(s => ({ ...s, handleMissingBuyPrice: 'accept' }))}
                       className={`p-4 rounded-2xl border-2 font-bold transition-all ${settings.handleMissingBuyPrice === 'accept' ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-200 bg-white text-slate-500'}`}
                     >
-                      Weka 0 (Accept)
+                      {t('acceptWithZero')}
                     </button>
                   </div>
                 </div>
 
                 <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200">
-                  <label className="block text-sm font-bold text-slate-700 mb-4">Ikiwa Bei ya Kuuza haipo:</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-4">{t('ifSellPriceMissing')}</label>
                   <div className="grid grid-cols-2 gap-4">
                     <button 
                       onClick={() => setSettings(s => ({ ...s, handleMissingSellPrice: 'reject' }))}
                       className={`p-4 rounded-2xl border-2 font-bold transition-all ${settings.handleMissingSellPrice === 'reject' ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-200 bg-white text-slate-500'}`}
                     >
-                      Kataa Row (Reject)
+                      {t('rejectRow')}
                     </button>
                     <button 
                       onClick={() => setSettings(s => ({ ...s, handleMissingSellPrice: 'accept' }))}
                       className={`p-4 rounded-2xl border-2 font-bold transition-all ${settings.handleMissingSellPrice === 'accept' ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-200 bg-white text-slate-500'}`}
                     >
-                      Weka 0 (Accept)
+                      {t('acceptWithZero')}
                     </button>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-200">
                   <div>
-                    <h4 className="font-bold text-slate-900">Unganisha Bidhaa Zinazofanana</h4>
-                    <p className="text-xs text-slate-500">Ikiwa jina na bei ni sawa, stock itaunganishwa.</p>
+                    <h4 className="font-bold text-slate-900">{t('mergeDuplicatesLabel')}</h4>
+                    <p className="text-xs text-slate-500">{t('mergeDuplicatesDesc')}</p>
                   </div>
                   <button 
                     onClick={() => setSettings(s => ({ ...s, mergeDuplicates: !s.mergeDuplicates }))}
@@ -526,38 +529,38 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
                 <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Check className="w-10 h-10" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900">Ripoti ya Import</h3>
-                <p className="text-slate-500">Mchakato umekamilika kwa mafanikio</p>
+                <h3 className="text-2xl font-bold text-slate-900">{t('importReport')}</h3>
+                <p className="text-slate-500">{t('importCompleted')}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Zimeingizwa</p>
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">{t('imported')}</p>
                   <p className="text-2xl font-bold text-emerald-600">{report.success}</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Zimekataliwa</p>
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">{t('rejected')}</p>
                   <p className="text-2xl font-bold text-rose-600">{report.failed}</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Zilizounganishwa</p>
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">{t('merged')}</p>
                   <p className="text-2xl font-bold text-blue-600">{report.merged}</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Duplicates</p>
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">{t('duplicatesLabel')}</p>
                   <p className="text-2xl font-bold text-amber-600">{report.duplicates}</p>
                 </div>
               </div>
 
               {report.errors.length > 0 && (
                 <div className="p-6 bg-rose-50 rounded-3xl border border-rose-100">
-                  <h4 className="font-bold text-rose-900 mb-2">Kuna Makosa {report.errors.length}</h4>
-                  <p className="text-sm text-rose-700 mb-4">Baadhi ya bidhaa hazijaingizwa kwa sababu ya data kutokamilika.</p>
+                  <h4 className="font-bold text-rose-900 mb-2">{t('errorsFound').replace('{count}', report.errors.length.toString())}</h4>
+                  <p className="text-sm text-rose-700 mb-4">{t('someProductsNotImported')}</p>
                   <button 
                     onClick={downloadErrorReport}
                     className="w-full py-3 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 transition-colors flex items-center justify-center"
                   >
-                    <Upload className="w-4 h-4 mr-2 rotate-180" /> Pakua File la Makosa
+                    <Upload className="w-4 h-4 mr-2 rotate-180" /> {t('downloadErrorReport')}
                   </button>
                 </div>
               )}
@@ -566,7 +569,7 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
                 onClick={onClose}
                 className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-colors"
               >
-                Maliza
+                {t('finish')}
               </button>
             </div>
           )}
@@ -579,13 +582,13 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
               onClick={() => setStep('upload')}
               className="flex-1 py-4 bg-white text-slate-600 font-bold rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors"
             >
-              Rudi Nyuma
+              {t('goBack')}
             </button>
             <button 
               onClick={() => setStep('settings')}
               className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center justify-center"
             >
-              Endelea
+              {t('continue')}
             </button>
           </div>
         )}
@@ -596,13 +599,13 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
               onClick={() => setStep('mapping')}
               className="flex-1 py-4 bg-white text-slate-600 font-bold rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors"
             >
-              Rudi Nyuma
+              {t('goBack')}
             </button>
             <button 
               onClick={startImport}
               className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center justify-center"
             >
-              Anza Kuingiza
+              {t('startImport')}
             </button>
           </div>
         )}

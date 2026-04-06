@@ -12,6 +12,7 @@ import { Navigate } from 'react-router-dom';
 
 export default function Matumizi() {
   const user = useStore(state => state.user);
+  const t = useStore(state => state.t);
   const showAlert = useStore(state => state.showAlert);
   const showConfirm = useStore(state => state.showConfirm);
   const { isFeatureEnabled, isBoss } = useFeatureToggles();
@@ -80,12 +81,12 @@ export default function Matumizi() {
       setIsAdding(false);
       SyncService.sync(true).catch(err => console.error('Expense sync failed:', err));
     } catch (error: any) {
-      showAlert('Kosa', 'Imeshindwa kuhifadhi: ' + error.message);
+      showAlert(t('error'), t('saveFailed') + ': ' + error.message);
     }
   };
 
   const handleDelete = async (id: string) => {
-    showConfirm('Futa Matumizi', 'Una uhakika unataka kufuta matumizi haya?', async () => {
+    showConfirm(t('deleteExpense'), t('deleteExpenseConfirm'), async () => {
       try {
         const expense = await db.expenses.get(id);
         await db.expenses.update(id, { is_deleted: 1, synced: 0, updated_at: new Date().toISOString() });
@@ -99,7 +100,7 @@ export default function Matumizi() {
 
         await SyncService.sync(true);
       } catch (error: any) {
-        showAlert('Kosa', 'Imeshindwa kufuta: ' + error.message);
+        showAlert(t('error'), t('deleteFailed') + ': ' + error.message);
       }
     });
   };
@@ -119,39 +120,39 @@ export default function Matumizi() {
           onClick={() => setIsAdding(false)}
           className="flex items-center text-slate-500 hover:text-slate-900 font-medium mb-6 md:mb-8 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Nyuma
+          <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
         </button>
 
         <div className="bg-white p-6 md:p-8 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm">
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 mb-6 md:mb-8">
-            Ongeza Matumizi Mapya
+            {t('newExpense')}
           </h1>
 
           <form onSubmit={handleSave} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Aina (Category)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">{t('category')}</label>
               <div className="relative">
                 <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <select required name="category" className="w-full pl-10 p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none">
-                  <option value="Chakula">Chakula</option>
-                  <option value="Usafiri">Usafiri</option>
-                  <option value="Kodi">Kodi</option>
-                  <option value="Mshahara">Mshahara</option>
-                  <option value="Umeme/Maji">Umeme/Maji</option>
-                  <option value="Vifaa">Vifaa</option>
-                  <option value="Matengenezo">Matengenezo</option>
-                  <option value="Nyingine">Nyingine</option>
+                  <option value="Chakula">{t('expenseCategoryFood')}</option>
+                  <option value="Usafiri">{t('expenseCategoryTransport')}</option>
+                  <option value="Kodi">{t('expenseCategoryRent')}</option>
+                  <option value="Mshahara">{t('expenseCategorySalary')}</option>
+                  <option value="Umeme/Maji">{t('expenseCategoryUtilities')}</option>
+                  <option value="Vifaa">{t('expenseCategoryEquipment')}</option>
+                  <option value="Matengenezo">{t('expenseCategoryMaintenance')}</option>
+                  <option value="Nyingine">{t('expenseCategoryOther')}</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Maelezo ya Matumizi (Optional)</label>
-              <input name="description" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Mfano: Malipo ya Umeme mwezi Machi" />
+              <label className="block text-sm font-semibold text-slate-700 mb-2">{t('expenseDescription')}</label>
+              <input name="description" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder={t('expenseDescriptionPlaceholder')} />
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Kiasi (Amount)</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">{t('amount')}</label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
@@ -166,7 +167,7 @@ export default function Matumizi() {
             </div>
 
             <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl mt-4 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
-              Hifadhi Matumizi
+              {t('saveExpense')}
             </button>
           </form>
         </div>
@@ -178,26 +179,26 @@ export default function Matumizi() {
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Matumizi ya Biashara</h1>
-          <p className="text-slate-500 mt-1 text-sm md:text-base">Fuatilia gharama zako za uendeshaji</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('businessExpenses')}</h1>
+          <p className="text-slate-500 mt-1 text-sm md:text-base">{t('trackOperatingCosts')}</p>
         </div>
         <button 
           onClick={() => setIsAdding(true)}
           className="w-full md:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
         >
-          <Plus className="w-5 h-5 mr-2" /> Ongeza Matumizi
+          <Plus className="w-5 h-5 mr-2" /> {t('addExpense')}
         </button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Jumla ya Matumizi</p>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">{t('totalExpenses')}</p>
           <h3 className="text-2xl font-black text-slate-900">
             {formatCurrency(myExpenses.filter((e: any) => !e.is_deleted).reduce((sum, e) => sum + e.amount, 0), currency)}
           </h3>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Matumizi ya Mwezi</p>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">{t('monthlyExpenses')}</p>
           <h3 className="text-2xl font-black text-blue-600">
             {formatCurrency(
               myExpenses
@@ -208,7 +209,7 @@ export default function Matumizi() {
           </h3>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Idadi ya Kumbukumbu</p>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">{t('recordCount')}</p>
           <h3 className="text-2xl font-black text-slate-900">{myExpenses.filter((e: any) => !e.is_deleted).length}</h3>
         </div>
       </div>
@@ -217,7 +218,7 @@ export default function Matumizi() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
         <input 
           type="text" 
-          placeholder="Tafuta matumizi kwa maelezo au aina..." 
+          placeholder={t('searchExpensesPlaceholder')} 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-12 pr-4 py-3 md:py-4 bg-white border border-slate-200 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all"
@@ -229,11 +230,11 @@ export default function Matumizi() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Tarehe</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Maelezo</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Aina</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Kiasi</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">Vitendo</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('date')}</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('description')}</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('category')}</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('amount')}</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">{t('action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -297,7 +298,7 @@ export default function Matumizi() {
         {filteredExpenses.length === 0 && (
           <div className="text-center py-20">
             <Receipt className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium">Hakuna matumizi yaliyopatikana.</p>
+            <p className="text-slate-500 font-medium">{t('noExpensesFound')}</p>
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import { formatCurrency } from '../utils/format';
 import { format, startOfDay, startOfWeek, startOfMonth, subMonths, startOfYear, subDays, eachDayOfInterval } from 'date-fns';
 import { Receipt, Calendar, Download, TrendingUp, BarChart3, RefreshCw, ChevronRight, ShoppingBag, Trophy, Trash2, RotateCcw, LineChart as LineChartIcon } from 'lucide-react';
 import { useStore } from '../store';
+import { TranslationKey } from '../translations';
 import { useSupabaseData, useSupabaseTotals } from '../hooks/useSupabaseData';
 import { db, recordAuditLog } from '../db';
 import { SyncService } from '../services/sync';
@@ -24,6 +25,7 @@ import {
 
 export default function Historia() {
   const user = useStore(state => state.user);
+  const t = useStore(state => state.t);
   const showAlert = useStore(state => state.showAlert);
   const showConfirm = useStore(state => state.showConfirm);
   const { isFeatureEnabled, isBoss } = useFeatureToggles();
@@ -55,11 +57,11 @@ export default function Historia() {
 
   const handleReverseSale = async (sale: any) => {
     if (!canRefund) {
-      showAlert('Kizuizi', 'Huna ruhusa ya kurudisha mauzo. Tafadhali wasiliana na bosi wako.');
+      showAlert(t('noPermission'), t('noPermissionRefund'));
       return;
     }
 
-    showConfirm('Rudisha Mauzo', 'Una uhakika unataka kurudisha mauzo haya? Bidhaa zitarudishwa stoo.', async () => {
+    showConfirm(t('refundSale'), t('refundConfirm'), async () => {
       try {
         // 1. Get sale items
         const items = saleItems.filter(i => i.sale_id === sale.id);
@@ -93,15 +95,15 @@ export default function Historia() {
         // 4. Trigger sync
         SyncService.sync(true).catch(console.error);
         
-        showAlert('Imefanikiwa', 'Mauzo yamerudishwa kikamilifu na bidhaa zimerudishwa stoo.');
+        showAlert(t('success'), t('refundSuccess'));
       } catch (error: any) {
-        showAlert('Kosa', 'Imeshindwa kurudisha mauzo: ' + error.message);
+        showAlert(t('error'), t('refundFailed') + ': ' + error.message);
       }
     });
   };
 
   const handleDeleteSale = async (sale: any) => {
-    showAlert('Kizuizi', 'Huna ruhusa ya kufuta mauzo. Tafadhali wasiliana na bosi wako.');
+    showAlert(t('noPermission'), t('noPermissionRefund'));
   };
 
   useEffect(() => {
@@ -179,18 +181,18 @@ export default function Historia() {
       
       return {
         name: format(day, 'dd/MM'),
-        Mapato: revenue,
+        [t('revenue')]: revenue,
       };
     });
-  }, [mySales, expenses]);
+  }, [mySales, expenses, t]);
 
   const exportCSV = () => {
-    const headers = ['Tarehe', 'Kiasi', 'Aina', 'Mteja'];
+    const headers = [t('date'), t('amount'), t('type'), t('customerName')];
     const rows = filteredSales.map(s => [
       `"${format(new Date(s.created_at), 'yyyy-MM-dd HH:mm')}"`,
       `"${s.total_amount}"`,
-      `"${s.payment_method === 'credit' ? 'Mkopo' : 'Taslimu'}"`,
-      `"${s.customer_name || 'Taslimu'}"`
+      `"${s.payment_method === 'credit' ? t('credit') : t('cash')}"`,
+      `"${s.customer_name || t('cash')}"`
     ]);
     
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -242,21 +244,21 @@ export default function Historia() {
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Historia & Ripoti</h1>
-          <p className="text-slate-500 mt-1 text-sm md:text-base">Tazama mauzo yako na ripoti za faida</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('historyAndReports')}</h1>
+          <p className="text-slate-500 mt-1 text-sm md:text-base">{t('viewSalesAndProfit')}</p>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-xl md:rounded-2xl w-full md:w-auto">
           <button 
             onClick={() => setView('risiti')}
             className={`flex-1 md:flex-none px-4 md:px-6 py-2 md:py-2.5 rounded-lg md:rounded-xl text-xs md:text-sm font-bold flex items-center justify-center transition-all ${view === 'risiti' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            <Receipt className="w-4 h-4 mr-2" /> Risiti
+            <Receipt className="w-4 h-4 mr-2" /> {t('receipts')}
           </button>
           <button 
             onClick={() => setView('ripoti')}
             className={`flex-1 md:flex-none px-4 md:px-6 py-2 md:py-2.5 rounded-lg md:rounded-xl text-xs md:text-sm font-bold flex items-center justify-center transition-all ${view === 'ripoti' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            <BarChart3 className="w-4 h-4 mr-2" /> Ripoti
+            <BarChart3 className="w-4 h-4 mr-2" /> {t('reports')}
           </button>
         </div>
       </header>
@@ -273,7 +275,7 @@ export default function Historia() {
                     filter === f ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
                   }`}
                 >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {t(f as TranslationKey)}
                 </button>
               ))}
             </div>
@@ -281,13 +283,13 @@ export default function Historia() {
               onClick={exportCSV} 
               className="w-full md:w-auto bg-white border border-slate-200 text-slate-700 px-5 py-2 rounded-xl text-sm font-bold flex items-center justify-center hover:bg-slate-50 transition-all"
             >
-              <Download className="w-4 h-4 mr-2" /> Pakua CSV
+              <Download className="w-4 h-4 mr-2" /> {t('downloadCSV')}
             </button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
             <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Mapato</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{t('revenue')}</p>
               <p className="text-lg md:text-2xl font-bold text-slate-900">{formatCurrency(totalRevenue, currency)}</p>
             </div>
           </div>
@@ -298,11 +300,11 @@ export default function Historia() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Tarehe</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Bidhaa</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Aina</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">Kiasi</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">Kitendo</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('date')}</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('product')}</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('type')}</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">{t('amount')}</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">{t('action')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -319,12 +321,12 @@ export default function Historia() {
                           {saleItems.filter(i => i.sale_id === sale.id).map(i => i.product_name).join(', ')}
                         </div>
                         <div className="text-xs text-slate-400 mt-1">
-                          {saleItems.filter(i => i.sale_id === sale.id).reduce((a, b) => a + b.qty, 0)} items
+                          {saleItems.filter(i => i.sale_id === sale.id).reduce((a, b) => a + b.qty, 0)} {t('items')}
                         </div>
                       </td>
                       <td className="px-6 py-5">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${sale.payment_method === 'credit' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          {sale.payment_method === 'credit' ? 'Mkopo' : 'Taslimu'}
+                          {sale.payment_method === 'credit' ? t('credit') : t('cash')}
                         </span>
                       </td>
                       <td className="px-6 py-5 text-right">
@@ -334,7 +336,7 @@ export default function Historia() {
                         <button 
                           onClick={() => handleReverseSale(sale)}
                           className="text-amber-600 hover:text-amber-700 p-2 rounded-lg hover:bg-amber-50 transition-colors inline-flex items-center"
-                          title="Rudisha Mauzo"
+                          title={t('refundSale')}
                         >
                           <RotateCcw className="w-4 h-4" />
                         </button>
@@ -356,7 +358,7 @@ export default function Historia() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${sale.payment_method === 'credit' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {sale.payment_method === 'credit' ? 'Mkopo' : 'Taslimu'}
+                        {sale.payment_method === 'credit' ? t('credit') : t('cash')}
                       </span>
                     </div>
                   </div>
@@ -365,13 +367,13 @@ export default function Historia() {
                   </div>
                   <div className="flex justify-between items-end pt-2 border-t border-slate-50">
                     <div className="text-[10px] text-slate-400 font-bold uppercase">
-                      {saleItems.filter(i => i.sale_id === sale.id).reduce((a, b) => a + b.qty, 0)} items
+                      {saleItems.filter(i => i.sale_id === sale.id).reduce((a, b) => a + b.qty, 0)} {t('items')}
                     </div>
                     <div className="flex items-center space-x-3">
                       <button 
                         onClick={() => handleReverseSale(sale)}
                         className="text-amber-600 hover:text-amber-700 p-1.5 rounded-lg hover:bg-amber-50 transition-colors"
-                        title="Rudisha Mauzo"
+                        title={t('refundSale')}
                       >
                         <RotateCcw className="w-4 h-4" />
                       </button>
@@ -386,7 +388,7 @@ export default function Historia() {
             {filteredSales.length === 0 && (
               <div className="text-center py-20">
                 <ShoppingBag className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                <p className="text-slate-500 font-medium">Hakuna mauzo katika kipindi hiki.</p>
+                <p className="text-slate-500 font-medium">{t('noSalesPeriod')}</p>
               </div>
             )}
           </div>
@@ -402,7 +404,7 @@ export default function Historia() {
                   <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mr-3">
                     <LineChartIcon className="w-5 h-5 text-blue-600" />
                   </div>
-                  <h3 className="font-bold text-slate-900 text-base md:text-lg">Ukuaji wa Biashara (Siku 30)</h3>
+                  <h3 className="font-bold text-slate-900 text-base md:text-lg">{t('businessGrowth')}</h3>
                 </div>
               </div>
               <div className="h-[300px] w-full relative min-h-[300px]">
@@ -429,7 +431,7 @@ export default function Historia() {
                     <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', paddingTop: '20px' }} />
                     <Line 
                       type="monotone" 
-                      dataKey="Mapato" 
+                      dataKey={t('revenue')} 
                       stroke="#3b82f6" 
                       strokeWidth={3} 
                       dot={false} 
@@ -447,7 +449,7 @@ export default function Historia() {
                   <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mr-3">
                     <Trophy className="w-5 h-5 text-amber-600" />
                   </div>
-                  <h3 className="font-bold text-slate-900 text-base md:text-lg">Bidhaa 10 Zinazoongoza</h3>
+                  <h3 className="font-bold text-slate-900 text-base md:text-lg">{t('topProducts')}</h3>
                 </div>
               </div>
               <div className="h-[300px] w-full relative min-h-[300px]">
@@ -466,7 +468,7 @@ export default function Historia() {
                     <Tooltip 
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                       formatter={(value: number) => [
-                        `${value} items`, 
+                        `${value} ${t('items')}`, 
                         ''
                       ]}
                     />
@@ -486,13 +488,13 @@ export default function Historia() {
               onClick={() => setReportType('mwezi')}
               className={`flex-1 md:flex-none px-6 py-3 rounded-xl md:rounded-2xl text-sm font-bold transition-all ${reportType === 'mwezi' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white border border-slate-200 text-slate-600'}`}
             >
-              Ripoti ya Kila Mwezi
+              {t('monthlyReport')}
             </button>
             <button
               onClick={() => setReportType('mwaka')}
               className={`flex-1 md:flex-none px-6 py-3 rounded-xl md:rounded-2xl text-sm font-bold transition-all ${reportType === 'mwaka' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white border border-slate-200 text-slate-600'}`}
             >
-              Ripoti ya Kila Mwaka
+              {t('yearlyReport')}
             </button>
           </div>
 
@@ -507,26 +509,26 @@ export default function Historia() {
                     <h3 className="font-bold text-slate-900 text-base md:text-lg">{report.label}</h3>
                   </div>
                   <span className="text-[10px] md:text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full uppercase">
-                    {report.mauzo} Mauzo
+                    {report.mauzo} {t('sales')}
                   </span>
                 </div>
                 
                 <div className="space-y-4 md:space-y-6">
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Mapato ya Jumla</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('totalRevenue')}</p>
                     <p className="text-xl md:text-2xl font-bold text-slate-900">{formatCurrency(report.mapato, currency)}</p>
                   </div>
                 </div>
                 
                 <button className="mt-8 w-full flex items-center justify-center text-blue-600 font-bold text-sm hover:underline">
-                  Tazama Maelezo <ChevronRight className="w-4 h-4 ml-1" />
+                  {t('viewDetails')} <ChevronRight className="w-4 h-4 ml-1" />
                 </button>
               </div>
             ))}
             {reportData.length === 0 && (
               <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-slate-200">
                 <BarChart3 className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                <p className="text-slate-500 font-medium">Hakuna data ya ripoti inayopatikana.</p>
+                <p className="text-slate-500 font-medium">{t('noReportData')}</p>
               </div>
             )}
           </div>

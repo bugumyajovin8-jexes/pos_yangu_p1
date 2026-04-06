@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
 export default function Login() {
+  const t = useStore(state => state.t);
   const setAuth = useStore(state => state.setAuth);
   const authError = useStore(state => state.authError);
   const setAuthError = useStore(state => state.setAuthError);
@@ -34,15 +35,15 @@ export default function Login() {
 
       if (authError) {
         if (authError.message.includes('Email not confirmed')) {
-          throw new Error('Barua pepe yako bado haijathibitishwa. Tafadhali angalia email yako na ubonyeze link ya kuthibitisha kabla ya kuingia.');
+          throw new Error(t('emailNotConfirmed'));
         }
         if (authError.message.includes('Invalid login credentials')) {
-          throw new Error('Barua pepe au nenosiri si sahihi. Tafadhali jaribu tena.');
+          throw new Error(t('invalidCredentials'));
         }
         throw authError;
       }
       
-      if (!authData.user) throw new Error('Kushindwa kuingia: Mtumiaji hakupatikana.');
+      if (!authData.user) throw new Error(t('loginFailed'));
 
       // Fetch user profile and shop status
       const { data: userData, error: userError } = await supabase
@@ -53,7 +54,7 @@ export default function Login() {
 
       if (userError || !userData) {
         console.error('User profile missing. Please ensure the server-side trigger is configured.');
-        throw new Error('Akaunti yako haijakamilika. Tafadhali wasiliana na msimamizi.');
+        throw new Error(t('incompleteAccount'));
       }
 
       // If user profile exists but shop_id is missing, try to recover it
@@ -75,13 +76,13 @@ export default function Login() {
 
       if (userData.status !== 'active' || isShopBlocked) {
         await supabase.auth.signOut();
-        throw new Error('Akaunti yako imezuiwa (Blocked). Tafadhali wasiliana na msimamizi wako ili kufunguliwa.');
+        throw new Error(t('accountBlocked'));
       }
 
       // Redirect boss users
       if (userData.role === 'boss' || userData.role === 'admin' || userData.role === 'owner') {
         await supabase.auth.signOut();
-        throw new Error('Hii ni App ya Wafanyakazi pekee. Tafadhali tumia App ya Bosi kusimamia biashara yako.');
+        throw new Error(t('staffAppOnly'));
       }
 
       const token = authData.session?.access_token || '';
@@ -106,7 +107,7 @@ export default function Login() {
 
     } catch (err: any) {
       console.error('Login error details:', err);
-      setError(err.message || 'Kuna tatizo limetokea wakati wa kuingia');
+      setError(err.message || t('loginError'));
       setPassword('');
     } finally {
       setLoading(false);
@@ -117,11 +118,15 @@ export default function Login() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
 
       <div className="bg-white p-8 rounded-3xl shadow-lg w-full max-w-sm text-center">
-        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Lock className="w-8 h-8" />
+        <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden">
+          <img src="/logo.png" alt="Venics Sales" className="w-full h-full object-cover" onError={(e) => {
+            e.currentTarget.style.display = 'none';
+            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+          }} />
+          <Lock className="w-10 h-10 hidden" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Karibu</h1>
-        <p className="text-gray-500 mb-8">Ingiza barua pepe na nenosiri kuendelea</p>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Venics Sales</h1>
+        <p className="text-gray-500 mb-8">{t('enterCredentials')}</p>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="relative">
@@ -131,7 +136,7 @@ export default function Login() {
               value={email}
               onChange={e => { setEmail(e.target.value); setError(''); }}
               className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Barua pepe (Email)"
+              placeholder={t('email')}
               required
             />
           </div>
@@ -143,7 +148,7 @@ export default function Login() {
               value={password}
               onChange={e => { setPassword(e.target.value); setError(''); }}
               className="w-full pl-12 pr-12 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Nenosiri (Password)"
+              placeholder={t('password')}
               required
             />
             <button
@@ -162,21 +167,20 @@ export default function Login() {
             disabled={!email || !password || loading}
             className="w-full bg-blue-600 disabled:bg-gray-300 text-white font-bold py-4 rounded-2xl shadow-md transition-colors mt-4"
           >
-            {loading ? 'Inaingia...' : 'Ingia'}
+            {loading ? t('signingIn') : t('login')}
           </button>
         </form>
 
         <div className="mt-6 text-sm text-gray-600">
-          Hauna akaunti?{' '}
+          {t('noAccount')}{' '}
           <Link to="/register" className="text-blue-600 font-bold hover:underline">
-            Tengeneza hapa
+            {t('createHere')}
           </Link>
         </div>
       </div>
 
-      {/* ✅ ADDED FOOTER TEXT HERE */}
       <p className="mt-6 text-xs text-gray-500 text-center">
-        Made by Venics Software Company
+        {t('madeBy')}
       </p>
 
     </div>

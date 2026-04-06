@@ -17,6 +17,7 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(1);
   const showAlert = useStore(state => state.showAlert);
+  const t = useStore(state => state.t);
 
   if (!isOpen) return null;
 
@@ -52,7 +53,7 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
         .toArray();
 
       if (salesToDelete.length === 0) {
-        showAlert('Taarifa', 'Hakuna data ya kufuta katika kipindi hiki.');
+        showAlert(t('alert'), t('noDataToDelete'));
         setIsDeleting(false);
         return;
       }
@@ -94,10 +95,10 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
       // Sync changes
       await SyncService.sync(true);
 
-      showAlert('Imefanikiwa', `Data ya ${salesToDelete.length} mauzo imefutwa kikamilifu.`);
+      showAlert(t('success'), t('deleteSuccess').replace('{count}', salesToDelete.length.toString()));
       onClose();
     } catch (error: any) {
-      showAlert('Kosa', 'Imeshindwa kufuta data: ' + error.message);
+      showAlert(t('error'), t('deleteError').replace('{error}', error.message));
     } finally {
       setIsDeleting(false);
       setConfirmStep(1);
@@ -112,7 +113,7 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
             <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center">
               <Trash2 className="w-5 h-5 text-rose-600" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">Futa Historia</h2>
+            <h2 className="text-xl font-bold text-slate-900">{t('deleteHistory')}</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
             <X className="w-6 h-6 text-slate-400" />
@@ -125,19 +126,19 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
               <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start space-x-3">
                 <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-amber-800 leading-relaxed">
-                  Kitendo hiki kitaondoa data ya mauzo na faida kutoka kwenye ripoti zako. Data hii haitaonekana tena kwenye dashibodi.
+                  {t('deleteHistoryDesc')}
                 </p>
               </div>
 
               <div className="space-y-3">
-                <p className="text-sm font-bold text-slate-700 ml-1">Chagua Kipindi cha Kufuta:</p>
+                <p className="text-sm font-bold text-slate-700 ml-1">{t('chooseDeletePeriod')}</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'today', label: 'Leo' },
-                    { id: 'week', label: 'Wiki Hii' },
-                    { id: 'month', label: 'Mwezi Huu' },
-                    { id: 'year', label: 'Mwaka Huu' },
-                    { id: 'all', label: 'Zote (Yote)' },
+                    { id: 'today', label: t('today') },
+                    { id: 'week', label: t('thisWeek') },
+                    { id: 'month', label: t('thisMonth') },
+                    { id: 'year', label: t('thisYear') },
+                    { id: 'all', label: t('allTime') },
                   ].map((p) => (
                     <button
                       key={p.id}
@@ -158,7 +159,7 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
                 onClick={() => setConfirmStep(2)}
                 className="w-full py-4 bg-rose-600 text-white font-bold rounded-2xl shadow-lg shadow-rose-600/20 hover:bg-rose-700 transition-all flex items-center justify-center"
               >
-                Endelea Kufuta
+                {t('continueDelete')}
               </button>
             </div>
           ) : (
@@ -167,9 +168,9 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
                 <AlertTriangle className="w-10 h-10 text-rose-600" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-2xl font-bold text-slate-900">Je, Una Uhakika?</h3>
+                <h3 className="text-2xl font-bold text-slate-900">{t('areYouSureDelete')}</h3>
                 <p className="text-slate-500">
-                  Unakaribia kufuta data ya kipindi cha <span className="font-bold text-rose-600 uppercase">{period}</span>. Kitendo hiki hakiwezi kurejeshwa.
+                  {t('deletePeriodWarning').replace('{period}', t(period === 'all' ? 'allTime' : (period === 'week' ? 'thisWeek' : (period === 'month' ? 'thisMonth' : (period === 'year' ? 'thisYear' : 'today')))))}
                 </p>
               </div>
 
@@ -179,7 +180,7 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
                   disabled={isDeleting}
                   className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all"
                 >
-                  Rudi Nyuma
+                  {t('goBack')}
                 </button>
                 <button
                   onClick={handleDelete}
@@ -189,10 +190,10 @@ export default function DeleteHistoryModal({ isOpen, onClose }: DeleteHistoryMod
                   {isDeleting ? (
                     <>
                       <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                      Inafuta...
+                      {t('deleting')}
                     </>
                   ) : (
-                    'Ndio, Futa Sasa'
+                    t('yesDeleteNow')
                   )}
                 </button>
               </div>

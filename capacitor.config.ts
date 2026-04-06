@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.posyangu.app',
-  appName: 'POS Yangu',
+  appId: 'com.venicssales.app',
+  appName: 'Venics Sales',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

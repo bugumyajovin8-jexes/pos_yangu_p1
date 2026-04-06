@@ -129,9 +129,10 @@ export default function App() {
           
           // Force logout if user is blocked OR if the entire shop is blocked OR if user is a boss
           if (!isUserActive || isShopBlocked || isBoss) {
+            const t = useStore.getState().t;
             const message = isBoss 
-              ? 'Hii ni App ya Wafanyakazi pekee. Tafadhali tumia App ya Bosi kusimamia biashara yako.'
-              : 'Akaunti Imezuiliwa: Tafadhali wasiliana 0787979273';
+              ? t('staffAppOnly')
+              : t('accountBlockedContact').replace('{phone}', '0787979273');
             
             logout(message);
             try { await supabase.auth.signOut(); } catch (e) {}
@@ -192,14 +193,15 @@ export default function App() {
         });
       }, 3000);
 
-      // Run sync every 30 seconds (matching Mobile app)
+      // Run sync every 10-15 seconds with jitter (improved from 30s)
+      // Jitter prevents "thundering herd" where many users hit the server at the exact same time
       const syncInterval = setInterval(() => {
         SyncService.sync().catch(err => {
           if (!err.message?.includes('AbortError') && !err.message?.includes('Lock broken')) {
             console.error('Periodic sync failed:', err);
           }
         });
-      }, 30 * 1000);
+      }, 10000 + Math.random() * 5000);
 
       // Run sync when coming online or when tab becomes visible
       const handleSyncTrigger = () => {
@@ -244,15 +246,16 @@ export default function App() {
   }
 
   if (isAuthenticated && user?.role === 'boss') {
+    const t = useStore.getState().t;
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-slate-200">
           <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Store className="w-10 h-10 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-4">Ukurasa wa Admin</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-4">{t('adminPage')}</h1>
           <p className="text-slate-600 mb-8 leading-relaxed">
-            Please use the Mobile App for Admin features. Ukurasa huu ni kwa ajili ya wafanyakazi tu.
+            {t('adminFeaturesMobile')}
           </p>
           <button 
             onClick={async () => {
@@ -261,7 +264,7 @@ export default function App() {
             }}
             className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-slate-800 transition-all"
           >
-            Ondoka
+            {t('logout')}
           </button>
         </div>
       </div>
@@ -282,10 +285,14 @@ export default function App() {
             {!needsShopSetup && (
               <header className="md:hidden bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-40 flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <Store className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden">
+                    <img src="/logo.png" alt="Venics Sales" className="w-full h-full object-cover" onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    }} />
+                    <Store className="w-5 h-5 text-white hidden" />
                   </div>
-                  <h1 className="font-bold text-gray-900">Cloud POS</h1>
+                  <h1 className="font-bold text-gray-900">Venics Sales</h1>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">

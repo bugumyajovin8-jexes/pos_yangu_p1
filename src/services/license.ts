@@ -15,17 +15,21 @@ export class LicenseService {
     let license = await db.license.get(1);
     if (!license) {
       const now = Date.now();
-      const expiry = now + (14 * 24 * 60 * 60 * 1000); // 14 days trial
       const deviceId = uuidv4();
       
-      const signature = EncryptionUtils.generateSignature(`${deviceId}-${expiry}-true`);
+      // Initialize as inactive with current time as expiry to force sync from Supabase.
+      // We no longer create a local 14-day trial because employees should inherit 
+      // the shop's license created by the boss.
+      const expiry = now; 
+      
+      const signature = EncryptionUtils.generateSignature(`${deviceId}-${expiry}-false`);
       
       license = {
         id: 1,
         deviceId,
         startDate: now,
         expiryDate: expiry,
-        isActive: true,
+        isActive: false,
         lastVerifiedAt: now,
         signature
       };
@@ -45,6 +49,11 @@ export class LicenseService {
     if (license.signature !== expectedSignature) {
       console.error('License signature mismatch! Tampering detected.');
       return { status: 'TAMPERED', daysRemaining };
+    }
+
+    // If it's a fresh install that hasn't synced yet, require sync
+    if (!license.isActive && license.startDate === license.lastVerifiedAt) {
+      return { status: 'SYNC_REQUIRED', daysRemaining: 0 };
     }
 
     if (!license.isActive) return { status: 'BLOCKED', daysRemaining };

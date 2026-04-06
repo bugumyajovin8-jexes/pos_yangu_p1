@@ -15,6 +15,7 @@ export default function Bidhaa() {
   const user = useStore(state => state.user);
   const showAlert = useStore(state => state.showAlert);
   const showConfirm = useStore(state => state.showConfirm);
+  const t = useStore(state => state.t);
   const { isFeatureEnabled } = useFeatureToggles();
   const canManageProducts = isFeatureEnabled('staff_product_management');
   
@@ -179,14 +180,14 @@ export default function Bidhaa() {
       setEditingProduct(null);
       SyncService.sync(true).catch(err => console.error('Product save sync failed:', err));
     } catch (error: any) {
-      showAlert('Kosa', 'Imeshindwa kuhifadhi: ' + error.message);
+      showAlert(t('error'), t('error') + ': ' + error.message);
     }
   };
 
   const handleDelete = async (id: string) => {
     showConfirm(
-      'Futa Bidhaa',
-      'Una uhakika unataka kufuta bidhaa hii? Kitendo hiki hakiwezi kurejeshwa.',
+      t('delete'),
+      t('confirmDeleteProduct'),
       async () => {
         try {
           const product = await db.products.get(id);
@@ -200,7 +201,7 @@ export default function Bidhaa() {
 
           await SyncService.sync(true);
         } catch (error: any) {
-          showAlert('Kosa', 'Imeshindwa kufuta: ' + error.message);
+          showAlert(t('error'), t('error') + ': ' + error.message);
         }
       }
     );
@@ -218,8 +219,8 @@ export default function Bidhaa() {
     if (activeProducts.length === 0) return;
 
     showConfirm(
-      'Futa Bidhaa Zote',
-      `Una uhakika unataka kufuta bidhaa zote ${activeProducts.length}? Kitendo hiki hakiwezi kurejeshwa.`,
+      t('deleteAll'),
+      t('confirmDeleteAllProducts').replace('{count}', activeProducts.length.toString()),
       async () => {
         try {
           const now = new Date().toISOString();
@@ -238,7 +239,7 @@ export default function Bidhaa() {
 
           await SyncService.sync(true);
         } catch (error: any) {
-          showAlert('Kosa', 'Imeshindwa kufuta zote: ' + error.message);
+          showAlert(t('error'), t('error') + ': ' + error.message);
         }
       }
     );
@@ -250,7 +251,7 @@ export default function Bidhaa() {
     
     const amount = parseFormattedNumber(stockToAdd);
     if (isNaN(amount) || amount <= 0) {
-      showAlert('Kosa', 'Tafadhali weka namba sahihi.');
+      showAlert(t('error'), t('invalidNumber'));
       return;
     }
     
@@ -294,7 +295,7 @@ export default function Bidhaa() {
       setFormExpiryDate('');
       SyncService.sync(true).catch(err => console.error('Stock add sync failed:', err));
     } catch (error: any) {
-      showAlert('Kosa', 'Imeshindwa kuongeza stock: ' + error.message);
+      showAlert(t('error'), t('error') + ': ' + error.message);
     }
   };
 
@@ -314,23 +315,23 @@ export default function Bidhaa() {
           onClick={() => { setIsAdding(false); setEditingProduct(null); }}
           className="flex items-center text-slate-500 hover:text-slate-900 font-medium mb-6 md:mb-8 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Nyuma
+          <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
         </button>
 
         <div className="bg-white p-6 md:p-8 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm">
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 mb-6 md:mb-8">
-            {p ? 'Hariri Bidhaa' : 'Ongeza Bidhaa Mpya'}
+            {p ? t('editProduct') : t('addNewProduct')}
           </h1>
 
           <form onSubmit={handleSave} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Jina la Bidhaa</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">{t('productName')}</label>
               <input required name="name" defaultValue={p?.name} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Mfano: Sukari 1kg" />
             </div>
             
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Bei ya Kununua</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t('buyPrice')}</label>
                 <input 
                   required 
                   type="text" 
@@ -340,7 +341,7 @@ export default function Bidhaa() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Bei ya Kuuza</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t('sellPrice')}</label>
                 <input 
                   required 
                   type="text" 
@@ -353,7 +354,7 @@ export default function Bidhaa() {
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Idadi ya Stock</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t('stockQuantity')}</label>
                 <input 
                   required 
                   type="text" 
@@ -364,7 +365,7 @@ export default function Bidhaa() {
               </div>
               {shopSettings?.enable_expiry && (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Tarehe ya Kuisha (Expiry)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t('expiryDate')}</label>
                   <input 
                     type="date" 
                     value={formExpiryDate}
@@ -377,7 +378,7 @@ export default function Bidhaa() {
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Tahadhari ya Stock (Min)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t('minStockAlert')}</label>
                 <input 
                   required 
                   type="text" 
@@ -388,7 +389,7 @@ export default function Bidhaa() {
               </div>
               {shopSettings?.enable_expiry && (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Siku za Kutoa Taarifa (Expiry)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t('notifyExpiryDays')}</label>
                   <input 
                     type="number" 
                     value={formNotifyDays}
@@ -401,7 +402,7 @@ export default function Bidhaa() {
             </div>
 
             <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl mt-4 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
-              Hifadhi Bidhaa
+              {t('saveProduct')}
             </button>
           </form>
         </div>
@@ -413,12 +414,12 @@ export default function Bidhaa() {
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Bidhaa Zilizopo</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('productsInStock')}</h1>
           <div className="flex items-center mt-1 space-x-2">
-            <p className="text-slate-500 text-sm md:text-base">Simamia bidhaa zako na idadi ya stock</p>
+            <p className="text-slate-500 text-sm md:text-base">{t('manageProductsDesc')}</p>
             <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
             <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full border border-blue-100">
-              {activeProductCount} Aina za Bidhaa
+              {activeProductCount} {t('productTypes')}
             </span>
           </div>
         </div>
@@ -429,19 +430,19 @@ export default function Bidhaa() {
                 onClick={handleDeleteAll}
                 className="bg-rose-50 text-rose-600 px-6 py-3 rounded-xl font-bold flex items-center justify-center hover:bg-rose-100 transition-colors border border-rose-100"
               >
-                <Trash2 className="w-5 h-5 mr-2" /> Futa Zote
+                <Trash2 className="w-5 h-5 mr-2" /> {t('deleteAll')}
               </button>
               <button 
                 onClick={() => setIsImporting(true)}
                 className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-xl font-bold flex items-center justify-center hover:bg-emerald-100 transition-colors border border-emerald-100"
               >
-                <FileSpreadsheet className="w-5 h-5 mr-2" /> Ingiza kwa Excel
+                <FileSpreadsheet className="w-5 h-5 mr-2" /> {t('importExcel')}
               </button>
               <button 
                 onClick={() => setIsAdding(true)}
                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
               >
-                <Plus className="w-5 h-5 mr-2" /> Ongeza Bidhaa
+                <Plus className="w-5 h-5 mr-2" /> {t('addProduct')}
               </button>
             </>
           )}
@@ -452,7 +453,7 @@ export default function Bidhaa() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
         <input 
           type="text" 
-          placeholder="Tafuta bidhaa kwa jina..." 
+          placeholder={t('searchByName')} 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-12 pr-4 py-3 md:py-4 bg-white border border-slate-200 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all"
@@ -465,10 +466,10 @@ export default function Bidhaa() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Bidhaa</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Bei ya Kuuza</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">Vitendo</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('products')}</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('sellingPrice')}</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider">{t('stock')}</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-600 uppercase tracking-wider text-right">{t('actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -497,7 +498,7 @@ export default function Bidhaa() {
                       </div>
                       {getExpiredStock(product) > 0 && (
                         <span className="text-xs font-bold text-rose-500 mt-1">
-                          {getExpiredStock(product)} zimeisha muda
+                          {getExpiredStock(product)} {t('expiredStock')}
                         </span>
                       )}
                     </div>
@@ -509,7 +510,7 @@ export default function Bidhaa() {
                           <button 
                             onClick={() => setStockModalProduct(product)}
                             className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                            title="Ongeza Stock"
+                            title={t('addStockTitle')}
                           >
                             <Plus className="w-5 h-5" />
                           </button>
@@ -553,7 +554,7 @@ export default function Bidhaa() {
               <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl">
                 <div className="flex flex-col">
                   <div className="flex items-center">
-                    <span className="text-xs font-bold text-slate-500 uppercase mr-2">Stock:</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase mr-2">{t('stock')}:</span>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${product.stock <= (product.min_stock || 5) ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
                       {product.stock} pcs
                     </span>
@@ -563,7 +564,7 @@ export default function Bidhaa() {
                   </div>
                   {getExpiredStock(product) > 0 && (
                     <span className="text-xs font-bold text-rose-500 mt-1">
-                      {getExpiredStock(product)} zimeisha muda
+                      {getExpiredStock(product)} {t('expiredStock')}
                     </span>
                   )}
                 </div>
@@ -598,7 +599,7 @@ export default function Bidhaa() {
         {filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium">Hakuna bidhaa zilizopatikana.</p>
+            <p className="text-slate-500 font-medium">{t('noProductsFound')}</p>
           </div>
         )}
       </div>
@@ -607,15 +608,15 @@ export default function Bidhaa() {
       {stockModalProduct && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl border border-slate-200">
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Ongeza Stock</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">{t('addStockTitle')}</h2>
             <p className="text-slate-500 mb-8">
-              Unaongeza idadi ya <span className="font-bold text-slate-900">{stockModalProduct.name}</span>. 
-              Stock ya sasa ni <span className="font-bold text-slate-900">{stockModalProduct.stock}</span>.
+              {t('addingStockTo')} <span className="font-bold text-slate-900">{stockModalProduct.name}</span>. 
+              {t('currentStockIs')} <span className="font-bold text-slate-900">{stockModalProduct.stock}</span>.
             </p>
             
             <form onSubmit={handleAddStockSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Idadi ya Kuongeza</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t('quantityToAdd')}</label>
                 <input 
                   autoFocus
                   required
@@ -629,14 +630,14 @@ export default function Bidhaa() {
               
               {shopSettings?.enable_expiry && (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Tarehe ya Kuisha (Expiry) - Hiari</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t('expiryDateOptional')}</label>
                   <input 
                     type="date"
                     value={formExpiryDate}
                     onChange={e => setFormExpiryDate(e.target.value)}
                     className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-xl font-bold"
                   />
-                  <p className="text-xs text-slate-500 mt-2">Kama mzigo huu una tarehe tofauti ya kuisha, iweke hapa.</p>
+                  <p className="text-xs text-slate-500 mt-2">{t('expiryDateDesc')}</p>
                 </div>
               )}
               
@@ -646,13 +647,13 @@ export default function Bidhaa() {
                   onClick={() => { setStockModalProduct(null); setStockToAdd(''); setFormExpiryDate(''); }}
                   className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
                 >
-                  Ghairi
+                  {t('cancel')}
                 </button>
                 <button 
                   type="submit"
                   className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors"
                 >
-                  Ongeza
+                  {t('add')}
                 </button>
               </div>
             </form>

@@ -16,8 +16,8 @@ export default defineConfig(({mode}) => {
           enabled: true
         },
         manifest: {
-          name: 'POS Yangu',
-          short_name: 'POSYangu',
+          name: 'Venics Sales',
+          short_name: 'VenicsSales',
           description: 'Mfumo wa Mauzo wa Kisasa',
           theme_color: '#000000',
           background_color: '#000000',
@@ -25,13 +25,13 @@ export default defineConfig(({mode}) => {
           orientation: 'portrait',
           icons: [
             {
-              src: 'https://placehold.co/192x192/000000/FFD700/png?text=$',
+              src: '/logo.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any maskable'
             },
             {
-              src: 'https://placehold.co/512x512/000000/FFD700/png?text=$',
+              src: '/logo.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable'

@@ -17,18 +17,19 @@ import { useFeatureToggles } from '../hooks/useFeatureToggles';
 
 export default function BottomNav() {
   const user = useStore(state => state.user);
+  const t = useStore(state => state.t);
   const { isFeatureEnabled } = useFeatureToggles();
   const shop = useLiveQuery(() => 
     user?.shop_id ? db.shops.get(user.shop_id) : null
   , [user?.shop_id]);
 
   const navItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashi' },
-    { to: '/bidhaa', icon: Package, label: 'Bidhaa' },
-    { to: '/kikapu', icon: ShoppingCart, label: 'Kikapu' },
-    { to: '/madeni', icon: Users, label: 'Madeni' },
-    ...(isFeatureEnabled('staff_expense_management') ? [{ to: '/matumizi', icon: Receipt, label: 'Matumizi' }] : []),
-    { to: '/zaidi', icon: Settings, label: 'Zaidi' },
+    { to: '/', icon: LayoutDashboard, label: t('dashboard').substring(0, 5) },
+    { to: '/bidhaa', icon: Package, label: t('products') },
+    { to: '/kikapu', icon: ShoppingCart, label: t('cart') },
+    { to: '/madeni', icon: Users, label: t('debts') },
+    ...(isFeatureEnabled('staff_expense_management') ? [{ to: '/matumizi', icon: Receipt, label: t('expenses') }] : []),
+    { to: '/zaidi', icon: Settings, label: t('more') },
   ];
 
   return (

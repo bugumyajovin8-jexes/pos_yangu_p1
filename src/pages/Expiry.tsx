@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Expiry() {
   const user = useStore(state => state.user);
+  const t = useStore(state => state.t);
   const showAlert = useStore(state => state.showAlert);
   const showConfirm = useStore(state => state.showConfirm);
   const navigate = useNavigate();
@@ -57,8 +58,8 @@ export default function Expiry() {
 
   const handleDisposeBatch = async (productId: string, batchId: string) => {
     showConfirm(
-      'Ondoa Mzigo',
-      'Je, una uhakika unataka kuondoa mzigo huu uliokwisha muda wake? Kitendo hiki kitaondoa idadi hii kwenye stock yako kabisa.',
+      t('disposeBatch'),
+      t('disposeBatchConfirm'),
       async () => {
         try {
           const product = products.find(p => p.id === productId);
@@ -75,8 +76,9 @@ export default function Expiry() {
             updated_at: new Date().toISOString(),
             synced: 0
           });
+          showAlert(t('success'), t('disposeBatchSuccess'));
         } catch (error: any) {
-          showAlert('Kosa', 'Imeshindwa kuondoa mzigo: ' + error.message);
+          showAlert(t('error'), t('disposeBatchError') + ': ' + error.message);
         }
       }
     );
@@ -93,8 +95,8 @@ export default function Expiry() {
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <header>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Ufuatiliaji wa Expiry</h1>
-        <p className="text-slate-500 mt-1 text-sm md:text-base">Bidhaa zilizokwisha muda au zinazokaribia kwisha muda wake</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('expiryTracking')}</h1>
+        <p className="text-slate-500 mt-1 text-sm md:text-base">{t('expiredAndExpiringSoon')}</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -105,15 +107,15 @@ export default function Expiry() {
               <AlertTriangle className="w-5 h-5 text-rose-600" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-bold text-rose-900">Zilizokwisha Muda</h2>
-              <p className="text-sm text-rose-600 font-medium">{expired.length} bidhaa</p>
+              <h2 className="text-lg font-bold text-rose-900">{t('expiredProducts')}</h2>
+              <p className="text-sm text-rose-600 font-medium">{expired.length} {t('products').toLowerCase()}</p>
             </div>
             {expired.length > 0 && (
               <button 
                 onClick={() => {
                   showConfirm(
-                    'Ondoa Zote',
-                    'Je, una uhakika unataka kuondoa bidhaa ZOTE zilizokwisha muda wake?',
+                    t('disposeAll'),
+                    t('disposeAllConfirm'),
                     async () => {
                       for (const item of expired) {
                         // We need a direct way to update without multiple confirms
@@ -131,12 +133,13 @@ export default function Expiry() {
                           });
                         }
                       }
+                      showAlert(t('success'), t('disposeBatchSuccess'));
                     }
                   );
                 }}
                 className="text-xs font-bold text-rose-600 hover:underline flex items-center"
               >
-                <Trash2 className="w-3.5 h-3.5 mr-1" /> Ondoa Zote
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> {t('disposeAll')}
               </button>
             )}
           </div>
@@ -144,7 +147,7 @@ export default function Expiry() {
           <div className="divide-y divide-slate-100">
             {expired.length === 0 ? (
               <div className="p-8 text-center text-slate-500">
-                Hakuna bidhaa zilizokwisha muda.
+                {t('noExpiredProducts')}
               </div>
             ) : (
               expired.map(item => (
@@ -156,19 +159,19 @@ export default function Expiry() {
                     <div>
                       <h3 className="font-bold text-slate-900">{item.name}</h3>
                       <div className="flex items-center mt-1 space-x-4 text-sm">
-                        <span className="text-slate-600 font-medium">Stock: <span className="text-slate-900 font-bold">{item.batchStock}</span></span>
-                        <span className="text-slate-600 font-medium">Bei: <span className="text-slate-900 font-bold">{formatCurrency(item.sell_price, currency)}</span></span>
+                        <span className="text-slate-600 font-medium">{t('stock')}: <span className="text-slate-900 font-bold">{item.batchStock}</span></span>
+                        <span className="text-slate-600 font-medium">{t('price')}: <span className="text-slate-900 font-bold">{formatCurrency(item.sell_price, currency)}</span></span>
                       </div>
                       <div className="flex items-center mt-2 text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg inline-flex">
                         <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                        Iliisha: {new Date(item.expiryDate).toLocaleDateString('sw-TZ')}
+                        {t('expiredOn')}: {new Date(item.expiryDate).toLocaleDateString(useStore.getState().language === 'sw' ? 'sw-TZ' : 'en-US')}
                       </div>
                     </div>
                   </div>
                   <button 
                     onClick={() => handleDisposeBatch(item.id, item.batchId)}
                     className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-                    title="Ondoa mzigo huu"
+                    title={t('disposeBatch')}
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
@@ -185,15 +188,15 @@ export default function Expiry() {
               <AlertTriangle className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-amber-900">Zinazokaribia Kwisha</h2>
-              <p className="text-sm text-amber-600 font-medium">{expiringSoon.length} bidhaa</p>
+              <h2 className="text-lg font-bold text-amber-900">{t('expiringSoonProducts')}</h2>
+              <p className="text-sm text-amber-600 font-medium">{expiringSoon.length} {t('products').toLowerCase()}</p>
             </div>
           </div>
           
           <div className="divide-y divide-slate-100">
             {expiringSoon.length === 0 ? (
               <div className="p-8 text-center text-slate-500">
-                Hakuna bidhaa zinazokaribia kwisha muda.
+                {t('noExpiringSoonProducts')}
               </div>
             ) : (
               expiringSoon.map(item => (
@@ -205,19 +208,19 @@ export default function Expiry() {
                     <div>
                       <h3 className="font-bold text-slate-900">{item.name}</h3>
                       <div className="flex items-center mt-1 space-x-4 text-sm">
-                        <span className="text-slate-600 font-medium">Stock: <span className="text-slate-900 font-bold">{item.batchStock}</span></span>
-                        <span className="text-slate-600 font-medium">Bei: <span className="text-slate-900 font-bold">{formatCurrency(item.sell_price, currency)}</span></span>
+                        <span className="text-slate-600 font-medium">{t('stock')}: <span className="text-slate-900 font-bold">{item.batchStock}</span></span>
+                        <span className="text-slate-600 font-medium">{t('price')}: <span className="text-slate-900 font-bold">{formatCurrency(item.sell_price, currency)}</span></span>
                       </div>
                       <div className="flex items-center mt-2 text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg inline-flex">
                         <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                        Inaisha: {new Date(item.expiryDate).toLocaleDateString('sw-TZ')} ({item.daysUntilExpiry} siku)
+                        {t('expiresOn')}: {new Date(item.expiryDate).toLocaleDateString(useStore.getState().language === 'sw' ? 'sw-TZ' : 'en-US')} ({item.daysUntilExpiry} {t('daysRemaining')})
                       </div>
                     </div>
                   </div>
                   <button 
                     onClick={() => handleDisposeBatch(item.id, item.batchId)}
                     className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
-                    title="Ondoa mzigo huu"
+                    title={t('disposeBatch')}
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>

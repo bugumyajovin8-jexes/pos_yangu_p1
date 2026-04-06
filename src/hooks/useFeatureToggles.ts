@@ -20,8 +20,27 @@ export function useFeatureToggles() {
   };
 
   const isFeatureEnabled = (featureKey: string) => {
-    // Prefer store if it has data, otherwise fallback to live query
-    return storeIsFeatureEnabled(featureKey);
+    // Check if user is a boss first
+    if (isBoss()) return true;
+
+    // Check the live features array from Dexie
+    const feature = features.find(f => f.featureKey === featureKey || (f as any).feature_key === featureKey);
+    
+    if (feature) {
+      // Robust boolean check (handles true, "true", 1, "1")
+      const isEnabled = feature.isEnabled === true || 
+                        feature.isEnabled === 1 || 
+                        String(feature.isEnabled).toLowerCase() === 'true' ||
+                        String(feature.isEnabled) === '1';
+      
+      console.log(`Feature check: ${featureKey} = ${isEnabled}`, feature);
+      return isEnabled;
+    }
+
+    // Fallback to store if Dexie query hasn't finished or is empty
+    const storeEnabled = storeIsFeatureEnabled(featureKey);
+    console.log(`Feature check (fallback): ${featureKey} = ${storeEnabled}`);
+    return storeEnabled;
   };
 
   return {

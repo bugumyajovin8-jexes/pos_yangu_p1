@@ -12,6 +12,7 @@ import { differenceInDays, parseISO } from 'date-fns';
 
 export default function Kikapu() {
   const user = useStore(state => state.user);
+  const t = useStore(state => state.t);
   const [shopSettings, setShopSettings] = useState<any>(null);
   const { data: allSales } = useSupabaseData<any>('sales');
   
@@ -126,13 +127,13 @@ export default function Kikapu() {
 
     try {
       // Use a transaction for the entire checkout process to prevent race conditions
-      await db.transaction('rw', [db.products, db.sales, db.saleItems], async () => {
+      await db.transaction('rw', [db.products, db.sales, db.saleItems, db.auditLogs], async () => {
         // Final stock check from local DB
         for (const item of cart) {
           const dbProduct = await db.products.get(item.id);
           const currentStock = dbProduct ? dbProduct.stock : 0;
           if (!dbProduct || currentStock < item.qty) {
-            throw new Error(`Bidhaa "${item.name}" haina stock ya kutosha. Stock iliyopo: ${currentStock}`);
+            throw new Error(t('insufficientStock').replace('{name}', item.name).replace('{stock}', currentStock.toString()));
           }
         }
 
@@ -246,7 +247,7 @@ export default function Kikapu() {
       SyncService.sync(true).catch(err => console.error('Checkout sync failed:', err));
       
     } catch (error: any) {
-      showAlert('Kosa', 'Kuna tatizo: ' + error.message);
+      showAlert(t('error'), t('error') + ': ' + error.message);
     } finally {
       setIsProcessing(false);
       processingRef.current = false;
@@ -266,12 +267,12 @@ export default function Kikapu() {
       {/* Left Side: Product Selection */}
       <div className="flex-1 flex flex-col border-r border-slate-200 bg-white min-w-0 h-full">
         <div className="p-4 md:p-6 border-b border-slate-100 flex-shrink-0">
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 mb-4">Chagua Bidhaa</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 mb-4">{t('selectProducts')}</h1>
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input 
               type="text" 
-              placeholder="Tafuta bidhaa..." 
+              placeholder={t('searchProductsPlaceholder')} 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
@@ -298,7 +299,7 @@ export default function Kikapu() {
                 </div>
                 <div className="mt-4 flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-50 pt-3">
                   <span className={`w-2 h-2 rounded-full mr-2 ${product.stock < 10 ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
-                  Stock: {product.stock}
+                  {t('stock')}: {product.stock}
                 </div>
               </button>
             ))}
@@ -322,7 +323,7 @@ export default function Kikapu() {
             </span>
           </div>
           <div className="text-left">
-            <p className="text-[10px] uppercase font-bold opacity-80 leading-none mb-1">Lipa Sasa</p>
+            <p className="text-[10px] uppercase font-bold opacity-80 leading-none mb-1">{t('payNow')}</p>
             <p className="font-black text-sm leading-none">{formatCurrency(cartTotal(), currency)}</p>
           </div>
         </button>
@@ -339,11 +340,11 @@ export default function Kikapu() {
               <ArrowLeft className="w-6 h-6 text-slate-600" />
             </button>
             <h2 className="text-lg md:text-xl font-bold text-slate-900 flex items-center">
-              <ShoppingBag className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3 text-blue-600" /> Kikapu
+              <ShoppingBag className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3 text-blue-600" /> {t('cart')}
             </h2>
           </div>
           {cart.length > 0 && (
-            <button onClick={clearCart} className="text-rose-500 text-xs md:text-sm font-bold hover:underline">Futa Vyote</button>
+            <button onClick={clearCart} className="text-rose-500 text-xs md:text-sm font-bold hover:underline">{t('clearAll')}</button>
           )}
         </div>
 
@@ -354,7 +355,7 @@ export default function Kikapu() {
                 <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-100 rounded-full flex items-center justify-center">
                   <ShoppingBag className="w-8 h-8 md:w-10 md:h-10" />
                 </div>
-                <p className="font-bold text-sm md:text-base">Kikapu kipo wazi</p>
+                <p className="font-bold text-sm md:text-base">{t('cartEmpty')}</p>
               </div>
             ) : (
               <>
@@ -362,15 +363,15 @@ export default function Kikapu() {
                   <div className="space-y-4 md:space-y-6 animate-in slide-in-from-bottom-4 duration-300 pb-4">
                     <div className="space-y-3 md:space-y-4 p-4 md:p-6 bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm">
                       <h3 className="font-bold text-slate-900 flex items-center">
-                        <User className="w-4 h-4 mr-2 text-blue-600" /> Taarifa za Mkopo
+                        <User className="w-4 h-4 mr-2 text-blue-600" /> {t('creditInfo')}
                       </h3>
                       <div className="relative">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">Jina la Mteja</label>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">{t('customerName')}</label>
                         <div className="relative">
                           <User className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 md:w-4 md:h-4" />
                           <input 
                             required 
-                            placeholder="Tafuta au ingiza jina..."
+                            placeholder={t('searchOrEnterName')}
                             value={customerName} 
                             onChange={e => {
                               setCustomerName(e.target.value);
@@ -395,11 +396,11 @@ export default function Kikapu() {
                         )}
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">Namba ya Simu</label>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">{t('phoneNumber')}</label>
                         <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full p-2 md:p-3 bg-slate-50 border border-slate-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-900 text-sm" />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">Tarehe ya Kulipa</label>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">{t('paymentDate')}</label>
                         <div className="relative">
                           <Calendar className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 md:w-4 md:h-4" />
                           <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full pl-9 md:pl-10 pr-4 py-2 md:py-3 bg-slate-50 border border-slate-200 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-900 text-sm" />
@@ -468,11 +469,11 @@ export default function Kikapu() {
         <div className="p-6 md:p-8 bg-white border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex-shrink-0">
           <div className="mb-4 md:mb-6">
             <div className="flex justify-between text-slate-500 font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1">
-              <span>Jumla ya Malipo</span>
+              <span>{t('totalPayment')}</span>
             </div>
             <div className="flex justify-between items-end">
               <span className="text-slate-900 font-black text-2xl md:text-3xl">{formatCurrency(cartTotal(), currency)}</span>
-              <span className="text-slate-400 text-[10px] md:text-xs font-bold mb-1">{cart.reduce((sum, item) => sum + item.qty, 0)} Bidhaa</span>
+              <span className="text-slate-400 text-[10px] md:text-xs font-bold mb-1">{cart.reduce((sum, item) => sum + item.qty, 0)} {t('items')}</span>
             </div>
           </div>
 
@@ -484,7 +485,7 @@ export default function Kikapu() {
                 className="w-full bg-emerald-600 disabled:bg-slate-200 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center space-x-3"
               >
                 {isProcessing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                <span>Kamilisha Mauzo (Cash)</span>
+                <span>{t('completeSaleCash')}</span>
               </button>
               <button 
                 onClick={() => { setIsCredit(true); setIsCheckout(true); }}
@@ -492,7 +493,7 @@ export default function Kikapu() {
                 className="w-full bg-amber-500 disabled:bg-slate-200 text-white font-bold py-4 rounded-2xl shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all flex items-center justify-center space-x-3"
               >
                 <CreditCard className="w-5 h-5" />
-                <span>Uza kwa Mkopo (Deni)</span>
+                <span>{t('sellOnCredit')}</span>
               </button>
             </div>
           ) : (
@@ -501,7 +502,7 @@ export default function Kikapu() {
                 onClick={() => { setIsCheckout(false); setIsCredit(false); }}
                 className="flex-1 bg-slate-100 text-slate-600 font-bold py-3 md:py-4 rounded-xl md:rounded-2xl hover:bg-slate-200 transition-colors text-sm md:text-base"
               >
-                Ghairi
+                {t('cancel')}
               </button>
               <button 
                 onClick={() => handleCompleteSale('credit')}
@@ -509,7 +510,7 @@ export default function Kikapu() {
                 className="flex-[2] bg-emerald-600 disabled:bg-slate-200 text-white font-bold py-3 md:py-4 rounded-xl md:rounded-2xl shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center space-x-2 md:space-x-3 text-sm md:text-base"
               >
                 {isProcessing ? <RefreshCw className="w-5 h-5 md:w-6 md:h-6 animate-spin" /> : <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" />}
-                <span>{isProcessing ? 'Inasindika...' : 'Kamilisha Mkopo'}</span>
+                <span>{isProcessing ? t('processing') : t('completeCredit')}</span>
               </button>
             </div>
           )}

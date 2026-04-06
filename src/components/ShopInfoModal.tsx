@@ -19,7 +19,7 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
     enable_expiry: false
   });
   const [loading, setLoading] = useState(false);
-
+  const t = useStore(state => state.t);
   const showAlert = useStore(state => state.showAlert);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
       onClose();
     } catch (error) {
       console.error('Failed to update shop info', error);
-      showAlert('Kosa', 'Imeshindwa kuhifadhi mabadiliko.');
+      showAlert(t('error'), t('saveChangesError'));
     } finally {
       setLoading(false);
     }
@@ -66,8 +66,8 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
               <Store className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Taarifa za Duka</h2>
-              <p className="text-xs text-slate-500">Hariri maelezo ya biashara yako</p>
+              <h2 className="text-xl font-bold text-slate-900">{t('shopInfoTitle')}</h2>
+              <p className="text-xs text-slate-500">{t('editBusinessDetails')}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
@@ -78,7 +78,7 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
         <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Jina la Duka</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('shopName')}</label>
               <div className="relative">
                 <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
@@ -86,13 +86,13 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium"
-                  placeholder="Mf: Juma General Store"
+                  placeholder={t('shopName')}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Namba ya Simu</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('phone')}</label>
               <div className="relative">
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
@@ -100,13 +100,13 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
                   value={formData.phone}
                   onChange={e => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium"
-                  placeholder="Mf: 0787979273"
+                  placeholder={t('phone')}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Jina la Mmiliki</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('ownerName')}</label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
@@ -114,7 +114,7 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
                   value={formData.owner_name}
                   onChange={e => setFormData({ ...formData, owner_name: e.target.value })}
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium"
-                  placeholder="Mf: John Doe"
+                  placeholder={t('ownerName')}
                 />
               </div>
             </div>
@@ -126,8 +126,8 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
                     <Calendar className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">Usimamizi wa Expiry</h4>
-                    <p className="text-[10px] text-slate-500">Washa/Zima ufuatiliaji wa tarehe za kuisha</p>
+                    <h4 className="font-bold text-slate-900 text-sm">{t('expiryManagement')}</h4>
+                    <p className="text-[10px] text-slate-500">{t('expiryManagementDesc')}</p>
                   </div>
                 </div>
                 <button 
@@ -146,7 +146,7 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
             onClick={onClose}
             className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 transition-colors"
           >
-            Ghairi
+            {t('cancel')}
           </button>
           <button
             onClick={handleSave}
@@ -154,7 +154,7 @@ export default function ShopInfoModal({ isOpen, onClose, shopData, onUpdate }: S
             className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50"
           >
             {loading ? <RefreshCw className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-            Hifadhi
+            {t('save')}
           </button>
         </div>
       </div>

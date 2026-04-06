@@ -163,6 +163,7 @@ export interface AuditLog {
   id: string;
   shop_id: string;
   user_id: string;
+  user_name?: string;
   action: string;
   details: string; // JSON string
   created_at: string;
@@ -308,6 +309,7 @@ export async function recordAuditLog(action: string, details: any) {
     id: uuidv4(),
     shop_id: user.shop_id,
     user_id: user.id,
+    user_name: user.name,
     action,
     details: JSON.stringify(details),
     created_at: new Date().toISOString(),

@@ -17,6 +17,9 @@ export default function Zaidi() {
   const logout = useStore(state => state.logout);
   const user = useStore(state => state.user);
   const showAlert = useStore(state => state.showAlert);
+  const language = useStore(state => state.language);
+  const setLanguage = useStore(state => state.setLanguage);
+  const t = useStore(state => state.t);
   const navigate = useNavigate();
   const { isFeatureEnabled } = useFeatureToggles();
   const canManageExpenses = isFeatureEnabled('staff_expense_management');
@@ -66,9 +69,9 @@ export default function Zaidi() {
     setIsManualSyncing(true);
     try {
       await SyncService.sync(true);
-      showAlert('Imefanikiwa', 'Data imesawazishwa kikamilifu!');
+      showAlert(t('success'), t('successSync'));
     } catch (e) {
-      showAlert('Kosa', 'Imeshindwa kusawazisha data. Tafadhali angalia internet yako.');
+      showAlert(t('error'), t('errorSync'));
     } finally {
       setIsManualSyncing(false);
     }
@@ -77,7 +80,7 @@ export default function Zaidi() {
   const handleResetSync = () => {
     SyncService.resetSync();
     setIsManualSyncing(false);
-    showAlert('Imefanikiwa', 'Hali ya kusawazisha imewekwa upya!');
+    showAlert(t('success'), t('resetSyncSuccess'));
   };
 
   const toggleExpiry = async () => {
@@ -91,47 +94,56 @@ export default function Zaidi() {
       });
       setShopSettings({ ...shopSettings, enable_expiry: newValue });
       SyncService.sync(true).catch(console.error);
-      showAlert('Imefanikiwa', newValue ? 'Vipengele vya Expiry vimeamilishwa!' : 'Vipengele vya Expiry vimezimwa!');
+      showAlert(t('success'), newValue ? t('expiryEnabled') : t('expiryDisabled'));
     } catch (e) {
-      showAlert('Kosa', 'Imeshindwa kubadili mpangilio.');
+      showAlert(t('error'), t('error'));
     }
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'sw' ? 'en' : 'sw');
   };
 
   const menuItems = [
     { 
       icon: AlertTriangle, 
-      label: 'Vipengele vya Expiry', 
-      desc: shopSettings?.enable_expiry ? 'Zima uwezo wa kuona na kuweka tarehe za kuisha' : 'Washa uwezo wa kuona na kuweka tarehe za kuisha', 
+      label: t('expiryFeatures'), 
+      desc: t('expiryFeaturesDesc'), 
       action: toggleExpiry,
       isToggle: true,
       enabled: shopSettings?.enable_expiry
     },
     { 
       icon: RefreshCw, 
-      label: 'Sawazisha Data (Sync)', 
-      desc: lastSync ? `Mara ya mwisho: ${formatDistanceToNow(lastSync, { addSuffix: true })}` : 'Tuma na upokee data kutoka kwenye wingu (Cloud)', 
+      label: t('syncData'), 
+      desc: lastSync ? `${t('lastSync')}: ${formatDistanceToNow(lastSync, { addSuffix: true })}` : t('syncDataDesc'), 
       action: handleSync, 
       loading: isManualSyncing 
     },
-    { icon: RefreshCw, label: 'Weka Upya Sync (Reset)', desc: 'Tumia hii kama sync imekwama kwa muda mrefu', action: handleResetSync },
-    { icon: User, label: 'Wasifu wa Mtumiaji', desc: 'Badili jina au namba ya simu', path: '#' },
-    { icon: CreditCard, label: 'Malipo & Leseni', desc: 'Angalia hali ya usajili wako', path: '#' },
-    { icon: Globe, label: 'Lugha', desc: 'Badili lugha ya mfumo', path: '#' },
-    { icon: HelpCircle, label: 'Msaada', desc: 'Maswali yanayoulizwa mara kwa mara', path: '#' },
+    { icon: RefreshCw, label: t('resetSync'), desc: t('resetSyncDesc'), action: handleResetSync },
+    { icon: User, label: t('userProfile'), desc: t('userProfileDesc'), path: '#' },
+    { icon: CreditCard, label: t('paymentsLicense'), desc: t('paymentsLicenseDesc'), path: '#' },
+    { 
+      icon: Globe, 
+      label: t('language'), 
+      desc: language === 'sw' ? 'Kiswahili' : 'English', 
+      action: toggleLanguage 
+    },
+    { icon: HelpCircle, label: t('help'), desc: t('helpDesc'), path: '#' },
   ];
 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Mipangilio</h1>
-          <p className="text-slate-500 mt-1 text-sm md:text-base">Simamia akaunti yako na taarifa za duka</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('settings')}</h1>
+          <p className="text-slate-500 mt-1 text-sm md:text-base">{t('userProfileDesc')}</p>
         </div>
         <button 
           onClick={handleLogout} 
           className="w-full md:w-auto bg-rose-50 text-rose-600 px-6 py-3 rounded-xl font-bold flex items-center justify-center hover:bg-rose-100 transition-colors border border-rose-100"
         >
-          <LogOut className="w-5 h-5 mr-2" /> Ondoka
+          <LogOut className="w-5 h-5 mr-2" /> {t('logout')}
         </button>
       </header>
 
@@ -149,29 +161,29 @@ export default function Zaidi() {
               <div className={`mt-4 inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                 license.status === 'trial' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
               }`}>
-                {license.status === 'trial' ? `Jaribio la Bure: Siku ${getTrialDaysLeft()} zimebaki` : 'Akaunti Imelipiwa'}
+                {license.status === 'trial' ? `${t('freeTrial')}: ${getTrialDaysLeft()} ${t('daysRemaining')}` : t('paidAccount')}
               </div>
             )}
 
             <div className="mt-6 pt-6 border-t border-slate-100 flex justify-center space-x-4">
               <div className="text-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Role</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">{t('role')}</p>
                 <p className="text-xs md:text-sm font-bold text-slate-700 capitalize">{user?.role || 'Admin'}</p>
               </div>
               <div className="w-px h-8 bg-slate-100"></div>
               <div className="text-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Status</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">{t('status')}</p>
                 <div className="flex items-center text-emerald-600 text-xs md:text-sm font-bold">
-                  <ShieldCheck className="w-3 h-3 mr-1" /> Active
+                  <ShieldCheck className="w-3 h-3 mr-1" /> {t('active')}
                 </div>
               </div>
             </div>
           </div>
 
           <div className="bg-slate-900 text-white p-6 md:p-8 rounded-2xl md:rounded-3xl shadow-xl">
-            <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">Huduma kwa Wateja</h3>
+            <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">{t('customerService')}</h3>
             <p className="text-slate-400 text-xs md:text-sm mb-6 leading-relaxed">
-              Unahitaji msaada? Timu yetu ipo tayari kukusaidia saa 24 kupitia WhatsApp au Simu.
+              {t('customerServiceDesc')}
             </p>
             <a 
               href="tel:0787979273" 
@@ -186,7 +198,7 @@ export default function Zaidi() {
         {/* Menu Items */}
         <div className="lg:col-span-2 bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-900 text-sm md:text-base">Mipangilio ya Mfumo</h3>
+            <h3 className="font-bold text-slate-900 text-sm md:text-base">{t('settings')}</h3>
           </div>
           <div className="divide-y divide-slate-100">
             {menuItems.map((item, idx) => (
@@ -195,7 +207,7 @@ export default function Zaidi() {
                 disabled={(item as any).loading}
                 onClick={() => {
                   if (item.action) item.action();
-                  else if (item.path !== '#') navigate(item.path);
+                  else if (item.path && item.path !== '#') navigate(item.path);
                 }}
                 className={`w-full flex items-center p-4 md:p-6 hover:bg-slate-50 transition-colors group text-left ${(item as any).loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
@@ -217,8 +229,8 @@ export default function Zaidi() {
             ))}
           </div>
           <div className="p-6 md:p-8 bg-slate-50 text-center">
-            <p className="text-[10px] text-slate-400 font-medium">Cloud POS Mobile Edition • Version 2.0.0</p>
-            <p className="text-[10px] text-slate-300 mt-1">© 2026 POS Yangu. Haki zote zimehifadhiwa.</p>
+            <p className="text-[10px] text-slate-400 font-medium">Venics Sales Mobile Edition • {t('version')} 2.0.0</p>
+            <p className="text-[10px] text-slate-300 mt-1">© 2026 Venics Sales. {t('rights')}</p>
           </div>
         </div>
       </div>

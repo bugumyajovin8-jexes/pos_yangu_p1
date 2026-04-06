@@ -6,7 +6,7 @@ import { supabase } from '../supabase';
 import { SyncService } from '../services/sync';
 
 export default function SetupShop() {
-  const { user, setAuth, token, logout } = useStore();
+  const { user, setAuth, token, logout, t } = useStore();
   const navigate = useNavigate();
   const [error, setError] = useState('');
 
@@ -48,7 +48,7 @@ export default function SetupShop() {
             .eq('id', user.id);
 
           if (updateError) {
-            throw new Error('Imeshindwa kusasisha taarifa zako. Tafadhali jaribu tena.');
+            throw new Error(t('updateProfileError'));
           }
 
           // 3. Delete the invitation
@@ -77,7 +77,7 @@ export default function SetupShop() {
         }
       } catch (err: any) {
         console.error('Invitation check error:', err);
-        setError(err.message || 'Kuna tatizo limetokea wakati wa kukagua mwaliko.');
+        setError(err.message || t('invitationCheckError'));
       } finally {
         isChecking = false;
       }
@@ -92,7 +92,7 @@ export default function SetupShop() {
     return () => {
       clearInterval(intervalId);
     };
-  }, [user, token, navigate, setAuth]);
+  }, [user, token, navigate, setAuth, t]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -102,23 +102,27 @@ export default function SetupShop() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
       <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md text-center border border-gray-100">
-        <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-          <Store className="w-10 h-10" />
+        <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 relative overflow-hidden">
+          <img src="/logo.png" alt="Venics Sales" className="w-full h-full object-cover" onError={(e) => {
+            e.currentTarget.style.display = 'none';
+            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+          }} />
+          <Store className="w-12 h-12 hidden" />
           <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-sm">
             <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
           </div>
         </div>
         
-        <h1 className="text-2xl font-bold text-gray-900 mb-3">Nasubiri Mwaliko</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-3">Venics Sales</h1>
         <p className="text-gray-500 mb-6 leading-relaxed">
-          Akaunti yako imetengenezwa kikamilifu. Tafadhali mwambie Bosi wako akutumie mwaliko kupitia barua pepe yako: <br/>
+          {t('setupShopDesc')} <br/>
           <strong className="text-gray-800 mt-2 inline-block">{user?.email}</strong>
         </p>
 
         <div className="bg-blue-50 text-blue-700 p-4 rounded-2xl text-sm mb-8 flex items-start text-left">
           <Loader2 className="w-5 h-5 animate-spin mr-3 flex-shrink-0 mt-0.5" />
           <p>
-            Mfumo unakagua mwaliko wako kila baada ya sekunde 30. Utaingia kwenye duka moja kwa moja mwaliko utakapopatikana.
+            {t('setupShopChecking')}
           </p>
         </div>
 
@@ -133,7 +137,7 @@ export default function SetupShop() {
           className="w-full bg-white border-2 border-gray-200 text-gray-700 font-bold py-4 rounded-2xl hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2"
         >
           <LogOut className="w-5 h-5" />
-          Ondoka
+          {t('logout')}
         </button>
       </div>
     </div>

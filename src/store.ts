@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Product, User, Feature } from './db';
+import { Language, translations, TranslationKey } from './translations';
 
 interface CartItem extends Product {
   qty: number;
@@ -43,6 +44,11 @@ interface PosState {
   showAlert: (title: string, message: string) => void;
   showConfirm: (title: string, message: string, onConfirm: () => void, onCancel?: () => void) => void;
   hideModal: () => void;
+
+  // Language
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: TranslationKey) => string;
 }
 
 export const useStore = create<PosState>((set, get) => ({
@@ -116,12 +122,23 @@ export const useStore = create<PosState>((set, get) => ({
   
   features: [],
   setFeatures: (features) => set({ features }),
-  isFeatureEnabled: (featureKey) => {
+  isFeatureEnabled: (featureKey: string) => {
     const state = get();
     const user = state.user;
     if (user && ['admin', 'boss', 'superadmin', 'owner'].includes(user.role)) return true;
-    const feature = state.features.find(f => f.featureKey === featureKey);
-    return feature ? feature.isEnabled : false;
+    
+    // Find feature by key (handle both camelCase and snake_case just in case)
+    const feature = state.features.find(f => f.featureKey === featureKey || (f as any).feature_key === featureKey);
+    
+    if (!feature) return false;
+    
+    // Robust boolean check (handles true, "true", 1, "1")
+    const isEnabled = feature.isEnabled === true || 
+                     feature.isEnabled === 1 || 
+                     String(feature.isEnabled).toLowerCase() === 'true' ||
+                     String(feature.isEnabled) === '1';
+                     
+    return isEnabled;
   },
   
   modal: {
@@ -138,7 +155,17 @@ export const useStore = create<PosState>((set, get) => ({
   }),
   hideModal: () => set((state) => ({
     modal: { ...state.modal, isOpen: false }
-  }))
+  })),
+
+  language: (localStorage.getItem('pos_lang') as Language) || 'sw',
+  setLanguage: (lang) => {
+    localStorage.setItem('pos_lang', lang);
+    set({ language: lang });
+  },
+  t: (key) => {
+    const lang = get().language;
+    return translations[lang][key] || translations['sw'][key] || key;
+  }
 }));
 
 // Initialize auth state if token exists

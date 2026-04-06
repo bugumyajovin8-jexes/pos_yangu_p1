@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { WifiOff, Wifi, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useStore } from '../store';
 
 export default function NetworkStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showBackOnline, setShowBackOnline] = useState(false);
+  const t = useStore(state => state.t);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -44,8 +46,8 @@ export default function NetworkStatus() {
               <Wifi className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-sm md:text-base">Internet Imerudi!</p>
-              <p className="text-xs opacity-90">Mfumo unajisajili upya sasa...</p>
+              <p className="font-bold text-sm md:text-base">{t('internetBack')}</p>
+              <p className="text-xs opacity-90">{t('systemReconnecting')}</p>
             </div>
             <button onClick={() => setShowBackOnline(false)} className="ml-2 p-1 hover:bg-white/10 rounded-lg transition-colors">
               <X className="w-4 h-4" />

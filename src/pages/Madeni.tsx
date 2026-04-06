@@ -10,12 +10,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 export default function Madeni() {
   const user = useStore(state => state.user);
+  const t = useStore(state => state.t);
   const showAlert = useStore(state => state.showAlert);
   const showConfirm = useStore(state => state.showConfirm);
   const [shopSettings, setShopSettings] = useState<any>(null);
-  const { data: sales, loading: salesLoading } = useSupabaseData<any>('sales');
-  const { data: saleItems, loading: itemsLoading } = useSupabaseData<any>('sale_items');
-  const { data: debtPayments, loading: paymentsLoading } = useSupabaseData<any>('debtPayments');
+  const { data: sales, loading: salesLoading } = useSupabaseData<any>('sales', { allTime: true });
+  const { data: saleItems, loading: itemsLoading } = useSupabaseData<any>('sale_items', { allTime: true });
+  const { data: debtPayments, loading: paymentsLoading } = useSupabaseData<any>('debtPayments', { allTime: true });
   const [search, setSearch] = useState('');
   
   const [paymentModal, setPaymentModal] = useState<{
@@ -56,12 +57,12 @@ export default function Madeni() {
 
     const amount = parseFormattedNumber(paymentModal.amount);
     if (isNaN(amount) || amount <= 0) {
-      showAlert('Kosa', 'Tafadhali weka kiasi sahihi.');
+      showAlert(t('error'), t('invalidAmount'));
       return;
     }
 
     if (amount > paymentModal.sale.remainingBalance) {
-      showAlert('Kosa', 'Kiasi hakiwezi kuzidi deni linalodaiwa.');
+      showAlert(t('error'), t('amountExceedsDebt'));
       return;
     }
 
@@ -106,12 +107,12 @@ export default function Madeni() {
       setPaymentModal({ show: false, sale: null, amount: '' });
       await SyncService.sync(true);
     } catch (error: any) {
-      showAlert('Kosa', 'Imeshindwa kufanya malipo: ' + error.message);
+      showAlert(t('error'), t('paymentFailed') + ': ' + error.message);
     }
   };
 
   const handleDeleteDebt = async (debt: any) => {
-    showAlert('Kosa', 'Huna ruhusa ya kufuta deni hili.');
+    showAlert(t('error'), t('noPermissionDeleteDebt'));
   };
 
   if (salesLoading || itemsLoading || paymentsLoading) {
@@ -126,15 +127,15 @@ export default function Madeni() {
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Madeni</h1>
-          <p className="text-slate-500 mt-1 text-sm md:text-base">Simamia wateja wanaodaiwa na makusanyo</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('debts')}</h1>
+          <p className="text-slate-500 mt-1 text-sm md:text-base">{t('manageDebtors')}</p>
         </div>
         <div className="w-full md:w-auto bg-rose-50 border border-rose-100 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl flex items-center space-x-4">
           <div className="w-8 h-8 md:w-10 md:h-10 bg-rose-100 rounded-full flex items-center justify-center">
             <AlertCircle className="w-5 h-5 md:w-6 md:h-6 text-rose-600" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-rose-800 uppercase">Jumla ya Madeni Yaliyobaki</p>
+            <p className="text-[10px] font-bold text-rose-800 uppercase">{t('totalRemainingDebts')}</p>
             <p className="text-lg md:text-xl font-bold text-rose-600">{formatCurrency(totalDebt, currency)}</p>
           </div>
         </div>
@@ -144,7 +145,7 @@ export default function Madeni() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
         <input 
           type="text" 
-          placeholder="Tafuta mteja..." 
+          placeholder={t('searchCustomer')} 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-12 pr-4 py-3 md:py-4 bg-white border border-slate-200 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all"
@@ -155,7 +156,7 @@ export default function Madeni() {
         {unpaidDebts.length === 0 ? (
           <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-slate-200">
             <User className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium">Hakuna madeni yoyote kwa sasa.</p>
+            <p className="text-slate-500 font-medium">{t('noDebts')}</p>
           </div>
         ) : (
           unpaidDebts.map(debt => (
@@ -170,11 +171,11 @@ export default function Madeni() {
                       <div className="flex items-center space-x-2">
                         <h3 className="font-bold text-slate-900 text-sm md:text-base">{debt.customer_name}</h3>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${debt.amountPaid > 0 ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-rose-100 text-rose-700 border border-rose-200'}`}>
-                          {debt.amountPaid > 0 ? 'Deni la Sehemu' : 'Deni'}
+                          {debt.amountPaid > 0 ? t('partialDebt') : t('debt')}
                         </span>
                       </div>
                       <p className="text-[10px] md:text-xs text-slate-500 flex items-center mt-0.5">
-                        <Phone className="w-3 h-3 mr-1" /> {debt.customer_phone || 'Namba haipo'}
+                        <Phone className="w-3 h-3 mr-1" /> {debt.customer_phone || t('noNumber')}
                       </p>
                     </div>
                   </div>
@@ -185,21 +186,21 @@ export default function Madeni() {
 
                 <div className="bg-slate-50 rounded-xl md:rounded-2xl p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-500 uppercase">Jumla ya Deni:</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase">{t('totalDebtAmount')}</span>
                     <span className="text-sm font-bold text-slate-900">{formatCurrency(debt.total_amount, currency)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-emerald-600 uppercase">Kiasi Kilicholipwa:</span>
+                    <span className="text-xs font-bold text-emerald-600 uppercase">{t('amountPaid')}</span>
                     <span className="text-sm font-bold text-emerald-600">{formatCurrency(debt.amountPaid, currency)}</span>
                   </div>
                   <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
-                    <span className="text-xs font-bold text-rose-600 uppercase">Kiasi Kilichobaki:</span>
+                    <span className="text-xs font-bold text-rose-600 uppercase">{t('remainingAmount')}</span>
                     <span className="text-lg font-bold text-rose-600">{formatCurrency(debt.remainingBalance, currency)}</span>
                   </div>
                 </div>
 
                 <div className="mt-4">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Bidhaa Alizochukua:</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{t('itemsTaken')}</p>
                   <div className="space-y-1">
                     {saleItems.filter(i => i.sale_id === debt.id).map((item, idx) => (
                       <div key={idx} className="flex justify-between text-[10px] md:text-xs">
@@ -213,9 +214,9 @@ export default function Madeni() {
 
               <div className="p-4 md:p-6 bg-slate-50/50 flex items-center justify-between mt-auto">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Kikomo cha Malipo</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">{t('paymentDeadline')}</span>
                   <span className="text-xs md:text-sm font-bold text-slate-700">
-                    {debt.due_date ? format(new Date(debt.due_date), 'dd/MM/yyyy') : 'Hakuna'}
+                    {debt.due_date ? format(new Date(debt.due_date), 'dd/MM/yyyy') : t('none')}
                   </span>
                 </div>
                 <button 
@@ -223,7 +224,7 @@ export default function Madeni() {
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-bold flex items-center hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
-                  Lipa Deni
+                  {t('payDebt')}
                 </button>
               </div>
             </div>
@@ -236,7 +237,7 @@ export default function Madeni() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-slate-900">Lipa Deni</h2>
+              <h2 className="text-2xl font-bold text-slate-900">{t('payDebt')}</h2>
               <button 
                 onClick={() => setPaymentModal({ show: false, sale: null, amount: '' })}
                 className="p-2 hover:bg-slate-100 rounded-full transition-colors"
@@ -246,18 +247,18 @@ export default function Madeni() {
             </div>
             
             <div className="bg-slate-50 p-4 rounded-2xl mb-6">
-              <p className="text-sm text-slate-500 mb-1">Mteja: <span className="font-bold text-slate-900">{paymentModal.sale.customer_name}</span></p>
-              <p className="text-sm text-slate-500">Kiasi Kinachodaiwa: <span className="font-bold text-rose-600">{formatCurrency(paymentModal.sale.remainingBalance, currency)}</span></p>
+              <p className="text-sm text-slate-500 mb-1">{t('customer')}: <span className="font-bold text-slate-900">{paymentModal.sale.customer_name}</span></p>
+              <p className="text-sm text-slate-500">{t('amountDue')}: <span className="font-bold text-rose-600">{formatCurrency(paymentModal.sale.remainingBalance, currency)}</span></p>
             </div>
 
             <form onSubmit={handlePaymentSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Kiasi Anacholipa Sasa</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t('enterAmountPaid')}</label>
                 <input 
                   autoFocus
                   required
                   type="text"
-                  placeholder="Mfano: 50,000"
+                  placeholder={t('exampleAmount')}
                   value={paymentModal.amount}
                   onChange={e => setPaymentModal(prev => ({ ...prev, amount: formatNumberWithCommas(e.target.value) }))}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-xl font-bold"
@@ -270,14 +271,14 @@ export default function Madeni() {
                   onClick={() => setPaymentModal({ show: false, sale: null, amount: '' })}
                   className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
                 >
-                  Ghairi
+                  {t('cancel')}
                 </button>
                 <button 
                   type="submit"
                   className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center justify-center"
                 >
                   <CheckCircle className="w-5 h-5 mr-2" />
-                  Thibitisha Malipo
+                  {t('confirmPayment')}
                 </button>
               </div>
             </form>

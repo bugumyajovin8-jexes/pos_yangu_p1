@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 
 export default function GlobalModal() {
-  const { modal, hideModal } = useStore();
+  const { modal, hideModal, t } = useStore();
 
   if (!modal.isOpen) return null;
 
@@ -51,7 +51,7 @@ export default function GlobalModal() {
                 }}
                 className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors font-medium"
               >
-                Ghairi
+                {t('cancel')}
               </button>
             )}
             <button
@@ -65,7 +65,7 @@ export default function GlobalModal() {
                   : 'bg-amber-600 hover:bg-amber-700'
               }`}
             >
-              {modal.type === 'alert' ? 'Sawa' : 'Ndiyo, Endelea'}
+              {modal.type === 'alert' ? t('ok') : t('confirm')}
             </button>
           </div>
         </div>

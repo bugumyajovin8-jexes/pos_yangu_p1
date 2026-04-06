@@ -10,15 +10,19 @@ import { useSupabaseData } from '../hooks/useSupabaseData';
 import { db } from '../db';
 import LowStockModal from '../components/LowStockModal';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useFeatureToggles } from '../hooks/useFeatureToggles';
 
 export default function Dashibodi() {
   const user = useStore(state => state.user);
+  const t = useStore(state => state.t);
   const navigate = useNavigate();
+  const { isFeatureEnabled } = useFeatureToggles();
+  const canManageProducts = isFeatureEnabled('staff_product_management');
 
-  const { data: sales, loading: salesLoading } = useSupabaseData<any>('sales', { days: 60 });
+  const { data: sales, loading: salesLoading } = useSupabaseData<any>('sales', { allTime: true });
   const { data: products, loading: productsLoading } = useSupabaseData<any>('products');
   const { data: expenses, loading: expensesLoading } = useSupabaseData<any>('expenses', { days: 60 });
-  const { data: debtPayments, loading: paymentsLoading } = useSupabaseData<any>('debtPayments', { days: 60 });
+  const { data: debtPayments, loading: paymentsLoading } = useSupabaseData<any>('debtPayments', { allTime: true });
   const [showLowStockModal, setShowLowStockModal] = useState(false);
 
   const shopSettings = useLiveQuery(
@@ -107,17 +111,18 @@ export default function Dashibodi() {
       return !s.is_deleted && saleTime >= dayStart && saleTime < dayEnd && s.status !== 'cancelled';
     });
     return {
-      name: d.toLocaleDateString('sw-TZ', { weekday: 'short' }),
-      Mapato: calcTotal(daySales),
+      name: d.toLocaleDateString(useStore.getState().language === 'sw' ? 'sw-TZ' : 'en-US', { weekday: 'short' }),
+      [t('revenue')]: calcTotal(daySales),
     };
   });
 
-  const totalDebt = mySales
-    .filter(s => !s.is_deleted && s.payment_method === 'credit' && s.status === 'pending')
+  const totalDebt = sales
+    .filter(s => !s.is_deleted && s.payment_method === 'credit' && s.status !== 'cancelled')
     .reduce((sum, s) => {
       const payments = debtPayments.filter(p => p.sale_id === s.id);
       const amountPaid = payments.reduce((pSum, p) => pSum + p.amount, 0);
-      return sum + (s.total_amount - amountPaid);
+      const remaining = s.total_amount - amountPaid;
+      return sum + (remaining > 0 ? remaining : 0);
     }, 0);
 
   if (salesLoading || productsLoading || expensesLoading || paymentsLoading) {
@@ -134,9 +139,9 @@ export default function Dashibodi() {
       <header className="md:hidden flex justify-between items-center mb-2">
         <div>
           <h1 className="text-xl font-bold text-slate-900 truncate max-w-[200px]">
-            {shop?.name || shopSettings?.shopName || 'Dashibodi'}
+            {shop?.name || shopSettings?.shopName || t('dashboard')}
           </h1>
-          <p className="text-xs text-slate-500">Karibu tena, {user?.name}</p>
+          <p className="text-xs text-slate-500">{t('welcomeBack')}, {user?.name}</p>
         </div>
         <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
           {user?.name?.charAt(0) || 'U'}
@@ -146,33 +151,33 @@ export default function Dashibodi() {
       {/* Desktop Header */}
       <header className="hidden md:flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">{shop?.name || shopSettings?.shopName || 'Dashibodi'}</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{shop?.name || shopSettings?.shopName || t('dashboard')}</h1>
           <div className="flex items-center space-x-2 mt-1">
-            <p className="text-slate-500">Karibu tena, {user?.name}</p>
+            <p className="text-slate-500">{t('welcomeBack')}, {user?.name}</p>
             <span className="text-slate-300">•</span>
-            <p className="text-slate-500 font-medium">{new Date().toLocaleDateString('sw-TZ', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <p className="text-slate-500 font-medium">{new Date().toLocaleDateString(useStore.getState().language === 'sw' ? 'sw-TZ' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
           {license && (
             <div className={`flex items-center px-4 py-2 rounded-xl text-sm font-semibold ${daysRemaining > 5 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
               {daysRemaining > 5 ? <ShieldCheck className="w-4 h-4 mr-2" /> : <AlertTriangle className="w-4 h-4 mr-2" />}
-              {`Siku ${daysRemaining} zimebaki`}
+              {`${t('daysRemaining').charAt(0).toUpperCase() + t('daysRemaining').slice(1)}: ${daysRemaining}`}
             </div>
           )}
-          {mergedSettings?.staff_product_management && (
+          {canManageProducts && (
             <button 
               onClick={() => navigate('/bidhaa')}
               className="bg-amber-500 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-amber-600 transition-colors shadow-lg shadow-amber-500/20"
             >
-              Ongeza Stock
+              {t('addStock')}
             </button>
           )}
           <button 
             onClick={() => navigate('/kikapu')}
             className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
           >
-            Uza Sasa
+            {t('sellNow')}
           </button>
         </div>
       </header>
@@ -180,21 +185,21 @@ export default function Dashibodi() {
       {/* Mobile License Status */}
       <div className="md:hidden space-y-3">
         <div className="flex justify-between items-center">
-          <p className="text-slate-500 text-sm font-medium">{new Date().toLocaleDateString('sw-TZ', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <p className="text-slate-500 text-sm font-medium">{new Date().toLocaleDateString(useStore.getState().language === 'sw' ? 'sw-TZ' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           {lowStockProducts.length > 0 && (
             <div 
               onClick={() => setShowLowStockModal(true)}
               className="flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer"
             >
               <AlertTriangle className="w-3 h-3 mr-1.5" />
-              Stock Chini ({lowStockProducts.length})
+              {t('lowStock')} ({lowStockProducts.length})
             </div>
           )}
         </div>
         {license && (
           <div className={`flex items-center px-4 py-3 rounded-xl text-sm font-semibold ${daysRemaining > 5 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
             {daysRemaining > 5 ? <ShieldCheck className="w-4 h-4 mr-2" /> : <AlertTriangle className="w-4 h-4 mr-2" />}
-            {`Siku ${daysRemaining} zimebaki`}
+            {`${t('daysRemaining').charAt(0).toUpperCase() + t('daysRemaining').slice(1)}: ${daysRemaining}`}
           </div>
         )}
       </div>
@@ -208,12 +213,12 @@ export default function Dashibodi() {
               <div className="flex items-center space-x-3 text-rose-600 mb-3">
                 <AlertTriangle className="w-6 h-6" />
                 <div>
-                  <h2 className="text-lg font-bold leading-tight">Zimekwisha Muda</h2>
-                  <p className="text-sm text-slate-500 font-medium">{expiredProducts.length} bidhaa</p>
+                  <h2 className="text-lg font-bold leading-tight">{t('expired')}</h2>
+                  <p className="text-sm text-slate-500 font-medium">{expiredProducts.length} {t('products').toLowerCase()}</p>
                 </div>
               </div>
               <p className="text-blue-600 text-sm font-semibold hover:underline flex items-center">
-                Bofya hapa kuona zaidi <ChevronRight className="w-4 h-4 ml-1" />
+                {t('clickToSeeMore')} <ChevronRight className="w-4 h-4 ml-1" />
               </p>
             </div>
           )}
@@ -224,12 +229,12 @@ export default function Dashibodi() {
               <div className="flex items-center space-x-3 text-amber-600 mb-3">
                 <Calendar className="w-6 h-6" />
                 <div>
-                  <h2 className="text-lg font-bold leading-tight">Zinakaribia Kuisha</h2>
-                  <p className="text-sm text-slate-500 font-medium">{expiringSoonProducts.length} bidhaa</p>
+                  <h2 className="text-lg font-bold leading-tight">{t('expiringSoon')}</h2>
+                  <p className="text-sm text-slate-500 font-medium">{expiringSoonProducts.length} {t('products').toLowerCase()}</p>
                 </div>
               </div>
               <p className="text-blue-600 text-sm font-semibold hover:underline flex items-center">
-                Bofya hapa kuona zaidi <ChevronRight className="w-4 h-4 ml-1" />
+                {t('clickToSeeMore')} <ChevronRight className="w-4 h-4 ml-1" />
               </p>
             </div>
           )}
@@ -240,12 +245,12 @@ export default function Dashibodi() {
               <div className="flex items-center space-x-3 text-rose-600 mb-3">
                 <Package className="w-6 h-6" />
                 <div>
-                  <h2 className="text-lg font-bold leading-tight">Tahadhari ya Stock</h2>
-                  <p className="text-sm text-slate-500 font-medium">{lowStockProducts.length} bidhaa</p>
+                  <h2 className="text-lg font-bold leading-tight">{t('stockAlert')}</h2>
+                  <p className="text-sm text-slate-500 font-medium">{lowStockProducts.length} {t('products').toLowerCase()}</p>
                 </div>
               </div>
               <p className="text-blue-600 text-sm font-semibold hover:underline flex items-center">
-                Bofya hapa kuona zaidi <ChevronRight className="w-4 h-4 ml-1" />
+                {t('clickToSeeMore')} <ChevronRight className="w-4 h-4 ml-1" />
               </p>
             </div>
           )}
@@ -258,7 +263,7 @@ export default function Dashibodi() {
           <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
             <DollarSign className="w-6 h-6 text-blue-600" />
           </div>
-          <p className="text-sm font-medium text-slate-500">Mapato (Leo)</p>
+          <p className="text-sm font-medium text-slate-500">{t('revenue')} ({t('today')})</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(calcTotal(todaySales), currency)}</p>
         </div>
 
@@ -266,15 +271,15 @@ export default function Dashibodi() {
           <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
             <ShoppingBag className="w-6 h-6 text-emerald-600" />
           </div>
-          <p className="text-sm font-medium text-slate-500">Idadi ya Mauzo</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">Mauzo {todaySales.length}</p>
+          <p className="text-sm font-medium text-slate-500">{t('salesCount')}</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{t('sales')} {todaySales.length}</p>
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center mb-4">
             <CreditCard className="w-6 h-6 text-rose-600" />
           </div>
-          <p className="text-sm font-medium text-slate-500">Hali ya Madeni</p>
+          <p className="text-sm font-medium text-slate-500">{t('debtStatus')}</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalDebt, currency)}</p>
         </div>
 
@@ -282,8 +287,8 @@ export default function Dashibodi() {
           <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
             <Package className="w-6 h-6 text-amber-600" />
           </div>
-          <p className="text-sm font-medium text-slate-500">Stock Iliyopo</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{totalStock} Items</p>
+          <p className="text-sm font-medium text-slate-500">{t('currentStock')}</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{totalStock} {t('items')}</p>
         </div>
       </div>
 
@@ -291,10 +296,10 @@ export default function Dashibodi() {
         {/* Chart Section */}
         <div className="lg:col-span-2 bg-white p-4 md:p-8 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex justify-between items-center mb-6 md:mb-8">
-            <h2 className="text-lg md:text-xl font-bold text-slate-900">Mwenendo wa Mapato</h2>
+            <h2 className="text-lg md:text-xl font-bold text-slate-900">{t('revenueTrend')}</h2>
             <select className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500">
-              <option>Siku 7 Zilizopita</option>
-              <option>Mwezi Huu</option>
+              <option>{t('last7Days')}</option>
+              <option>{t('thisMonth')}</option>
             </select>
           </div>
           <div className="h-64 md:h-80 relative min-h-[250px]">
@@ -321,7 +326,7 @@ export default function Dashibodi() {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   cursor={{fill: '#f8fafc'}}
                 />
-                <Bar dataKey="Mapato" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
+                <Bar dataKey={t('revenue')} fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -331,17 +336,17 @@ export default function Dashibodi() {
         <div className="space-y-6 md:space-y-8">
           <div className="bg-slate-900 text-white p-6 md:p-8 rounded-2xl md:rounded-3xl shadow-xl relative overflow-hidden">
             <div className="relative z-10">
-              <h2 className="text-base md:text-lg font-semibold opacity-80">Mapato ya Mwezi</h2>
+              <h2 className="text-base md:text-lg font-semibold opacity-80">{t('monthlyRevenue')}</h2>
               <p className="text-2xl md:text-3xl font-bold mt-2">{formatCurrency(calcTotal(monthSales), currency)}</p>
               <div className={`mt-6 flex items-center text-sm font-medium ${percentChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {percentChange >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-                <span>{percentChange >= 0 ? '+' : ''}{percentChange.toFixed(1)}% tangu mwezi uliopita</span>
+                <span>{percentChange >= 0 ? '+' : ''}{percentChange.toFixed(1)}% {t('sinceLastMonth')}</span>
               </div>
               <button 
                 onClick={() => navigate('/historia')}
                 className="mt-8 w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-medium transition-colors flex items-center justify-center"
               >
-                Angalia Ripoti <ChevronRight className="w-4 h-4 ml-1" />
+                {t('viewReport')} <ChevronRight className="w-4 h-4 ml-1" />
               </button>
             </div>
             <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>

@@ -79,27 +79,30 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
     };
   }, [user]);
 
-  if (loading) return <div className="h-screen bg-gray-50 flex items-center justify-center">Inapakia...</div>;
+  if (loading) return <div className="h-screen bg-gray-50 flex items-center justify-center">{useStore.getState().t('loading')}</div>;
 
   if (status !== 'VALID') {
+    const t = useStore.getState().t;
     let icon = <Lock className="w-16 h-16 text-red-500 mb-4" />;
-    let title = 'Akaunti Imefungwa';
-    let message = 'Tafadhali wasiliana na msimamizi wako. 0787979273';
+    let title = t('accountLocked');
+    let message = t('contactAdmin').replace('{phone}', '0787979273');
 
     if (status === 'EXPIRED') {
       icon = <CalendarX className="w-16 h-16 text-red-500 mb-4" />;
-      title = 'Leseni Imeisha';
-      message = 'Muda wa matumizi ya mfumo umeisha. Piga 0787979273 kuongeza muda.';
+      title = t('licenseExpired');
+      message = t('licenseExpiredDesc').replace('{phone}', '0787979273');
     } else if (status === 'SYNC_REQUIRED') {
       icon = <Wifi className="w-16 h-16 text-orange-500 mb-4" />;
-      title = 'Unganisha Mtandao';
-      message = 'Mfumo unahitaji mtandao kuhakiki leseni. Tafadhali washa data au WiFi.';
+      title = daysRemaining === 0 ? t('verifyingLicense') : t('connectInternet');
+      message = daysRemaining === 0 
+        ? t('licenseSyncRequiredDesc')
+        : t('licenseSyncRequiredDescShort');
     } else if (status === 'DATE_MANIPULATED' || status === 'TAMPERED') {
       icon = <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />;
-      title = status === 'TAMPERED' ? 'Hitilafu ya Usalama' : 'Tarehe Sio Sahihi';
+      title = status === 'TAMPERED' ? t('securityError') : t('invalidDate');
       message = status === 'TAMPERED' 
-        ? 'Data za leseni zimebadilishwa kinyume cha sheria. Tafadhali wasiliana na msimamizi.'
-        : 'Tafadhali rekebisha tarehe na saa ya simu yako iwe sahihi.';
+        ? t('tamperedDataDesc')
+        : t('fixDateDesc');
     }
 
     return (
@@ -114,7 +117,7 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
           className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-8 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"
         >
           <Wifi className={`w-5 h-5 ${syncing ? 'animate-pulse' : ''}`} />
-          {syncing ? 'Inahakiki...' : 'Hakiki Leseni Sasa'}
+          {syncing ? t('verifying') : t('verifyLicenseNow')}
         </button>
       </div>
     );
@@ -124,7 +127,7 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
     <>
       {daysRemaining <= 5 && (
         <div className="bg-orange-500 text-white text-xs font-bold text-center py-1.5 px-4 z-50 relative shadow-sm">
-          Siku {daysRemaining} zimebaki kabla ya leseni kuisha. Piga 0787979273 kupata leseni mapema.
+          {useStore.getState().t('licenseDaysRemaining').replace('{days}', daysRemaining.toString()).replace('{phone}', '0787979273')}
         </div>
       )}
       {children}
