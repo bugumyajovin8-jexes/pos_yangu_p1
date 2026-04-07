@@ -13,9 +13,9 @@ export class SyncService {
   static async sync(force = false): Promise<void> {
     const now = Date.now();
     
-    // Auto-reset if stuck for more than 30 minutes
-    if (this.isSyncing && now - this.lastSyncAttempt > 30 * 60 * 1000) {
-      console.warn('Sync was stuck for over 30 minutes, force-resetting...');
+    // Auto-reset if stuck for more than 5 minutes
+    if (this.isSyncing && now - this.lastSyncAttempt > 5 * 60 * 1000) {
+      console.warn('Sync was stuck for over 5 minutes, force-resetting...');
       this.isSyncing = false;
       this.currentSyncPromise = null;
     }
@@ -260,11 +260,17 @@ export class SyncService {
 
     console.log(`Pulled ${data?.length || 0} records for ${tableName}`);
     if (data && data.length > 0) {
+      const ids = data.map((r: any) => r.id);
+      const existingRecords = await table.bulkGet(ids);
+      const existingMap = new Map(existingRecords.filter(Boolean).map((r: any) => [r.id, r]));
+      
+      const toPut: any[] = [];
       const localRecords: any[] = [];
+
       for (const record of data) {
         const localData = this.mapToLocal(tableName, record);
         localRecords.push(localData);
-        const existing = await table.get(record.id);
+        const existing = existingMap.get(record.id);
 
         const isRemoteNewer = existing && record.updated_at && 
           new Date(record.updated_at) > new Date(existing.updated_at);
@@ -272,7 +278,7 @@ export class SyncService {
         const hasUnsyncedChanges = existing && existing.synced === 0;
 
         if (!existing) {
-          await table.put({ 
+          toPut.push({ 
             ...localData, 
             stock_delta: localData.stock_delta || 0,
             synced: 1 
@@ -284,7 +290,7 @@ export class SyncService {
             const remoteStock = Number(record.stock) || 0;
             const mergedStock = Math.max(0, remoteStock + pendingDelta);
             
-            await table.put({ 
+            toPut.push({ 
               ...localData, 
               stock: mergedStock,
               stock_delta: pendingDelta,
@@ -292,9 +298,13 @@ export class SyncService {
             });
           } else if (!hasUnsyncedChanges) {
             // Standard overwrite if no local changes
-            await table.put({ ...localData, synced: 1 });
+            toPut.push({ ...localData, synced: 1 });
           }
         }
+      }
+
+      if (toPut.length > 0) {
+        await table.bulkPut(toPut);
       }
 
       // Update store if features were pulled
