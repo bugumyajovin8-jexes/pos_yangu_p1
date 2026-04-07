@@ -300,15 +300,6 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
         }
       });
 
-      // Record Audit Log
-      await recordAuditLog('import_products_excel', {
-        total_rows: excelData.length,
-        success_count: successCount,
-        merged_count: mergedCount,
-        failed_count: failedCount
-      });
-
-      await SyncService.sync(true);
       setReport({
         total: excelData.length,
         success: successCount,
@@ -318,6 +309,20 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
         errors: errors
       });
       setStep('report');
+
+      // Trigger background tasks without blocking the UI
+      recordAuditLog('import_products_excel', {
+        total_rows: excelData.length,
+        success_count: successCount,
+        merged_count: mergedCount,
+        failed_count: failedCount
+      }).catch(err => console.error('Failed to record import audit log:', err));
+
+      SyncService.sync(true).catch(err => {
+        if (!err.message?.includes('AbortError') && !err.message?.includes('Lock broken')) {
+          console.error('Background import sync failed:', err);
+        }
+      });
     } catch (err) {
       setError(t('failedToSaveToDb'));
       setStep('mapping');
