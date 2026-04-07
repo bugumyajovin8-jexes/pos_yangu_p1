@@ -78,9 +78,11 @@ export class SyncService {
       console.log(`Syncing for shopId: ${shopId}, User role: ${user.role}`);
       const settings = await db.settings.get(1);
       const lastSync = settings?.lastSync || 0;
-      const lastSyncDate = lastSync ? new Date(lastSync).toISOString() : '';
+      // Subtract 2 minutes buffer to account for clock skew between client and server
+      // This prevents missing records if the device clock is ahead of the server clock
+      const lastSyncDate = lastSync ? new Date(lastSync - 120000).toISOString() : '';
 
-      console.log(`Starting sync process for shop ${shopId}... Last sync: ${lastSyncDate || 'Never'}`);
+      console.log(`Starting sync process for shop ${shopId}... Last sync (with buffer): ${lastSyncDate || 'Never'}`);
 
       // 0. Sync License
       await this.executeWithRetry('License Sync', () => LicenseService.syncLicense(), 3, 30000);

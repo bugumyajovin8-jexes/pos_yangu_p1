@@ -48,7 +48,7 @@ export default function Sidebar() {
           <Store className="w-6 h-6 text-white hidden" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-lg leading-none truncate">{shop?.name || 'Venics Sales'}</h1>
+          <h1 className="font-bold text-lg leading-none truncate">Venics Sales</h1>
           <p className="text-xs text-slate-400 mt-1">{t('desktopEdition')}</p>
         </div>
       </div>

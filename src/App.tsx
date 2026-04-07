@@ -186,7 +186,7 @@ export default function App() {
     if (isAuthenticated && user?.shop_id) {
       // Run sync with a small delay to avoid contention with other auth-related calls on mount
       const initialSyncTimeout = setTimeout(() => {
-        SyncService.sync().catch(err => {
+        SyncService.sync(true).catch(err => {
           if (!err.message?.includes('AbortError') && !err.message?.includes('Lock broken')) {
             console.error('Initial sync failed:', err);
           }
