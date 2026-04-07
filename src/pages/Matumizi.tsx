@@ -72,9 +72,8 @@ export default function Matumizi() {
       
       // Record Audit Log
       await recordAuditLog('add_expense', {
-        expense_id: expenseData.id,
-        category: expenseData.category,
         amount: expenseData.amount,
+        category: expenseData.category,
         description: expenseData.description
       });
 

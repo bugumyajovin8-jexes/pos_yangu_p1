@@ -167,14 +167,28 @@ export default function Bidhaa() {
       await db.products.put(productData);
       
       // Record Audit Log
-      await recordAuditLog(editingProduct ? 'edit_product' : 'add_product', {
-        product_id: id,
-        name: productData.name,
-        buy_price: productData.buy_price,
-        sell_price: productData.sell_price,
-        stock: productData.stock,
-        delta: delta
-      });
+      if (editingProduct) {
+        const changes: any = {};
+        if (productData.name !== editingProduct.name) changes.name = { new: productData.name, old: editingProduct.name };
+        if (productData.buy_price !== editingProduct.buy_price) changes.buy_price = { new: productData.buy_price, old: editingProduct.buy_price };
+        if (productData.sell_price !== editingProduct.sell_price) changes.sell_price = { new: productData.sell_price, old: editingProduct.sell_price };
+        if (productData.stock !== editingProduct.stock) changes.stock = { new: productData.stock, old: editingProduct.stock };
+        if (productData.notify_expiry_days !== editingProduct.notify_expiry_days) changes.notify_expiry_days = { new: productData.notify_expiry_days, old: editingProduct.notify_expiry_days };
+
+        await recordAuditLog('edit_product', {
+          product_id: id,
+          name: productData.name,
+          changes
+        });
+      } else {
+        await recordAuditLog('add_product', {
+          product_id: id,
+          name: productData.name,
+          buy_price: productData.buy_price,
+          sell_price: productData.sell_price,
+          stock: productData.stock
+        });
+      }
 
       setIsAdding(false);
       setEditingProduct(null);

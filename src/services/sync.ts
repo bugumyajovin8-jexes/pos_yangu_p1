@@ -372,6 +372,16 @@ export class SyncService {
       mapped.shop_id = data.shop_id || data.shopId;
     }
 
+    if (tableName === 'audit_logs') {
+      if (typeof data.details === 'string') {
+        try {
+          mapped.details = JSON.parse(data.details);
+        } catch (e) {
+          console.error('Failed to parse audit log details:', e);
+        }
+      }
+    }
+
     return mapped;
   }
 

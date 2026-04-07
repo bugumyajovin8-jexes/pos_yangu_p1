@@ -87,9 +87,9 @@ export default function Historia() {
 
         // Record Audit Log
         await recordAuditLog('refund_sale', {
-          sale_id: sale.id,
-          total_amount: sale.total_amount,
-          items_count: items.length
+          items: items.map(i => ({ qty: i.qty, name: i.product_name })),
+          amount: sale.total_amount,
+          sale_id: sale.id
         });
 
         // 4. Trigger sync
