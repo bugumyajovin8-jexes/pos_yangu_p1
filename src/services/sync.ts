@@ -87,9 +87,11 @@ export class SyncService {
       // 0. Sync License
       await this.executeWithRetry('License Sync', () => LicenseService.syncLicense(), 3, 30000);
 
-      // 1. Push local changes
-      const tables = ['shops', 'products', 'sales', 'sale_items', 'expenses', 'features', 'debt_payments', 'users', 'audit_logs'];
-      for (const tableName of tables) {
+      // 1. Sequential Pushing (Hierarchical Organization)
+      // Order: Store -> User -> Products -> Sales -> Sale Items
+      const pushOrder = ['shops', 'users', 'products', 'sales', 'sale_items', 'expenses', 'features', 'debt_payments', 'audit_logs'];
+      
+      for (const tableName of pushOrder) {
         try {
           const table = (db as any)[
             tableName === 'sale_items' ? 'saleItems' : 
@@ -106,7 +108,8 @@ export class SyncService {
       }
 
       // 2. Pull remote changes (incremental)
-      for (const tableName of tables) {
+      const pullOrder = ['shops', 'users', 'features', 'products', 'sales', 'sale_items', 'expenses', 'debt_payments', 'audit_logs'];
+      for (const tableName of pullOrder) {
         try {
           const table = (db as any)[
             tableName === 'sale_items' ? 'saleItems' : 
@@ -184,28 +187,32 @@ export class SyncService {
   }
 
   private static async pushTable(tableName: string, table: any, signal: AbortSignal) {
+    // 2. "Synced" Flag System (Tracking what has been sent)
+    // Only fetch records where synced = 0 (Not Sent)
     const unsynced = await table.where('synced').equals(0).toArray();
     
     if (unsynced.length === 0) return;
 
     console.log(`Pushing ${unsynced.length} unsynced records for ${tableName}`);
-    // Handle products as a single batch operation
+    
+    // 3. "Smart Delta Merge" (The Magic of Product Quantities)
     if (tableName === 'products') {
       const productsData = unsynced.map((record: any) => {
         const { synced, ...localData } = record;
         const dataToSync = this.mapToRemote(tableName, localData);
-        // Use the persistent stock_delta
+        // We send the CHANGE (delta), not the final total
         dataToSync.stock_delta = record.stock_delta || 0;
         return dataToSync;
       });
 
       if (productsData.length > 0) {
+        // This RPC handles the addition/subtraction on the server safely
         const { error: rpcError } = await supabase.rpc('sync_products_with_deltas', { products_data: productsData }).abortSignal(signal);
         if (!rpcError) {
           for (const record of unsynced) {
             await table.update(record.id, { 
               synced: 1,
-              stock_delta: 0 // Reset delta after successful push
+              stock_delta: 0 // Reset delta locally after successful push
             });
           }
         } else {
