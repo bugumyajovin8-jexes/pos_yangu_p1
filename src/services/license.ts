@@ -17,10 +17,10 @@ export class LicenseService {
       const now = Date.now();
       const deviceId = uuidv4();
       
-      // Initialize as inactive with current time as expiry to force sync from Supabase.
-      // We no longer create a local 14-day trial because employees should inherit 
-      // the shop's license created by the boss.
-      const expiry = now; 
+      // Initialize as inactive with 0 expiry.
+      // The app MUST sync with Supabase to get a valid license.
+      // No local trial is granted.
+      const expiry = 0; 
       
       const signature = EncryptionUtils.generateSignature(`${deviceId}-${expiry}-false`);
       
@@ -80,6 +80,7 @@ export class LicenseService {
   }
 
   private static async syncWithRetry(shopId: string, retries = 3) {
+    console.log(`LicenseService: Attempting to fetch license for shopId: ${shopId}`);
     for (let i = 0; i < retries; i++) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s per attempt
@@ -93,16 +94,18 @@ export class LicenseService {
         clearTimeout(timeoutId);
 
         if (licenseRes.error && licenseRes.error.code !== 'PGRST116') {
+          console.error('License fetch error:', licenseRes.error);
           throw licenseRes.error;
         }
         if (shopRes.error && shopRes.error.code !== 'PGRST116') {
+          console.error('Shop fetch error:', shopRes.error);
           throw shopRes.error;
         }
 
         const isShopBlocked = shopRes.data?.status === 'blocked';
         
         if (licenseRes.data) {
-          console.log('License found on server, updating local state...');
+          console.log('License found on server, updating local state:', licenseRes.data);
           const expiryDate = new Date(licenseRes.data.expiry_date).getTime();
           const isActive = licenseRes.data.status === 'active' && 
                           licenseRes.data.is_active !== false && 
@@ -128,7 +131,17 @@ export class LicenseService {
             signature
           });
         } else {
-          console.log('No license record found on server, keeping local trial state.');
+          console.log(`No license record found on server for shopId: ${shopId}. Setting local state to inactive.`);
+          const license = await this.getLocalLicense();
+          // Explicitly set to inactive and 0 expiry if no record exists on server
+          const signature = EncryptionUtils.generateSignature(`${license.deviceId}-0-false`);
+          
+          await db.license.update(1, {
+            expiryDate: 0,
+            isActive: false,
+            lastVerifiedAt: Date.now(),
+            signature
+          });
         }
         
         window.dispatchEvent(new CustomEvent('license-updated'));
@@ -167,10 +180,10 @@ export class LicenseService {
     }
 
     // Robust shopId resolution: prioritize shop_id/shopId from user object
-    const shopId = user.shop_id || user.shopId || (user.role === 'boss' ? user.id : null);
+    const shopId = user.shop_id || user.shopId;
     
     if (!shopId) {
-      console.error('License sync failed: Could not determine shopId for user', user.id);
+      console.warn('License sync skipped: Could not determine shopId for user', user.id);
       return;
     }
 
@@ -181,6 +194,10 @@ export class LicenseService {
       console.log(`Starting license sync process for shop: ${shopId}...`);
       
       try {
+        // Check online status again inside the promise
+        if (!navigator.onLine) {
+          throw new Error('No internet connection');
+        }
         await this.syncWithRetry(shopId, 3);
         console.log('License sync completed successfully');
       } catch (err: any) {
