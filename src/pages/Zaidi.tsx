@@ -10,6 +10,7 @@ import ShopInfoModal from '../components/ShopInfoModal';
 import DeleteHistoryModal from '../components/DeleteHistoryModal';
 import ResetShopModal from '../components/ResetShopModal';
 import { SyncService } from '../services/sync';
+import { LicenseService } from '../services/license';
 import { formatDistanceToNow } from 'date-fns';
 import { useFeatureToggles } from '../hooks/useFeatureToggles';
 
@@ -79,6 +80,7 @@ export default function Zaidi() {
 
   const handleResetSync = () => {
     SyncService.resetSync();
+    LicenseService.resetSync();
     setIsManualSyncing(false);
     showAlert(t('success'), t('resetSyncSuccess'));
   };

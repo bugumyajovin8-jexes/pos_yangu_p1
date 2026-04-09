@@ -7,6 +7,7 @@ export class SyncService {
   private static isSyncing = false;
   private static lastSyncAttempt = 0;
   private static lastSyncEnd = 0;
+  private static lastSyncLog = 0;
   private static currentSyncPromise: Promise<void> | null = null;
   private static pendingSync = false;
 
@@ -21,12 +22,17 @@ export class SyncService {
     }
 
     if (this.isSyncing) {
-      if (force) {
-        console.log(`Sync skipped: Already syncing (started ${Math.round((now - this.lastSyncAttempt)/1000)}s ago), but force requested - queuing follow-up`);
-        this.pendingSync = true;
-      } else {
-        console.log(`Sync skipped: Already syncing (started ${Math.round((now - this.lastSyncAttempt)/1000)}s ago)`);
+      // Only log every 30s to reduce noise
+      if (!this.lastSyncLog || now - this.lastSyncLog > 30000) {
+        if (force) {
+          console.log(`Sync skipped: Already syncing (started ${Math.round((now - this.lastSyncAttempt)/1000)}s ago), but force requested - queuing follow-up`);
+        } else {
+          console.log(`Sync skipped: Already syncing (started ${Math.round((now - this.lastSyncAttempt)/1000)}s ago)`);
+        }
+        this.lastSyncLog = now;
       }
+      
+      if (force) this.pendingSync = true;
       return this.currentSyncPromise || Promise.resolve();
     }
 
@@ -270,7 +276,7 @@ export class SyncService {
     console.log(`Pulled ${data?.length || 0} records for ${tableName}`);
     if (data && data.length > 0) {
       const ids = data.map((r: any) => r.id);
-      const existingRecords = await table.bulkGet(ids);
+      const existingRecords = await table.bulkGet(ids) as any[];
       const existingMap = new Map(existingRecords.filter(Boolean).map((r: any) => [r.id, r]));
       
       const toPut: any[] = [];

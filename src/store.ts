@@ -134,7 +134,7 @@ export const useStore = create<PosState>((set, get) => ({
     
     // Robust boolean check (handles true, "true", 1, "1")
     const isEnabled = feature.isEnabled === true || 
-                     feature.isEnabled === 1 || 
+                     (feature.isEnabled as any) === 1 || 
                      String(feature.isEnabled).toLowerCase() === 'true' ||
                      String(feature.isEnabled) === '1';
                      

@@ -11,6 +11,8 @@ export class LicenseService {
   private static lastSyncAttempt = 0;
   private static currentSyncPromise: Promise<void> | null = null;
 
+  private static lastSyncLog = 0;
+
   static async getLocalLicense() {
     let license = await db.license.get(1);
     if (!license) {
@@ -38,7 +40,7 @@ export class LicenseService {
     return license;
   }
 
-  static async checkStatus(): Promise<{ status: LicenseStatus, daysRemaining: number }> {
+  static async checkStatus(): Promise<{ status: LicenseStatus, daysRemaining: number, expiryDate: number }> {
     const license = await this.getLocalLicense();
     const now = Date.now();
     const fiveDays = 5 * 24 * 60 * 60 * 1000;
@@ -48,27 +50,27 @@ export class LicenseService {
     const expectedSignature = EncryptionUtils.generateSignature(`${license.deviceId}-${license.expiryDate}-${license.isActive}`);
     if (license.signature !== expectedSignature) {
       console.error('License signature mismatch! Tampering detected.');
-      return { status: 'TAMPERED', daysRemaining };
+      return { status: 'TAMPERED', daysRemaining, expiryDate: license.expiryDate };
     }
 
     // If it's a fresh install that hasn't synced yet, require sync
     if (!license.isActive && license.startDate === license.lastVerifiedAt) {
-      return { status: 'SYNC_REQUIRED', daysRemaining: 0 };
+      return { status: 'SYNC_REQUIRED', daysRemaining: 0, expiryDate: license.expiryDate };
     }
 
-    if (!license.isActive) return { status: 'BLOCKED', daysRemaining };
+    if (!license.isActive) return { status: 'BLOCKED', daysRemaining, expiryDate: license.expiryDate };
     
     // Anti-cheat: If current time is earlier than last recorded verification time, 
     // it means the user likely moved the device clock backward to bypass expiry.
     // We allow a small 2-minute buffer for minor clock sync adjustments.
     if (now < license.lastVerifiedAt - 120000) {
-      return { status: 'DATE_MANIPULATED', daysRemaining };
+      return { status: 'DATE_MANIPULATED', daysRemaining, expiryDate: license.expiryDate };
     }
     
-    if (now > license.expiryDate) return { status: 'EXPIRED', daysRemaining };
+    if (now > license.expiryDate) return { status: 'EXPIRED', daysRemaining, expiryDate: license.expiryDate };
     
     // If it's been more than 5 days since the last sync, require a sync
-    if (now - license.lastVerifiedAt > fiveDays) return { status: 'SYNC_REQUIRED', daysRemaining };
+    if (now - license.lastVerifiedAt > fiveDays) return { status: 'SYNC_REQUIRED', daysRemaining, expiryDate: license.expiryDate };
 
     // Update lastVerifiedAt locally to track time progress.
     // Only update if the current time is actually later than the stored time.
@@ -76,7 +78,7 @@ export class LicenseService {
       await db.license.update(1, { lastVerifiedAt: now });
     }
 
-    return { status: 'VALID', daysRemaining };
+    return { status: 'VALID', daysRemaining, expiryDate: license.expiryDate };
   }
 
   private static async syncWithRetry(shopId: string, retries = 3) {
@@ -86,12 +88,29 @@ export class LicenseService {
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s per attempt
 
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Current Supabase Session:', session ? `User: ${session.user.id}` : 'No session');
+
         const [licenseRes, shopRes] = await Promise.all([
-          supabase.from('licenses').select('*').eq('shop_id', shopId).abortSignal(controller.signal).single(),
+          supabase.from('licenses').select('*').eq('shop_id', shopId).abortSignal(controller.signal).limit(1),
           supabase.from('shops').select('status').eq('id', shopId).abortSignal(controller.signal).single()
         ]);
         
         clearTimeout(timeoutId);
+
+        const licenseData = licenseRes.data && licenseRes.data.length > 0 ? licenseRes.data[0] : null;
+
+        console.log('Supabase License Response:', { 
+          data: licenseData, 
+          error: licenseRes.error?.message,
+          code: licenseRes.error?.code,
+          count: licenseRes.data?.length
+        });
+        console.log('Supabase Shop Response:', { 
+          data: shopRes.data, 
+          error: shopRes.error?.message,
+          code: shopRes.error?.code 
+        });
 
         if (licenseRes.error && licenseRes.error.code !== 'PGRST116') {
           console.error('License fetch error:', licenseRes.error);
@@ -104,11 +123,11 @@ export class LicenseService {
 
         const isShopBlocked = shopRes.data?.status === 'blocked';
         
-        if (licenseRes.data) {
-          console.log('License found on server, updating local state:', licenseRes.data);
-          const expiryDate = new Date(licenseRes.data.expiry_date).getTime();
-          const isActive = licenseRes.data.status === 'active' && 
-                          licenseRes.data.is_active !== false && 
+        if (licenseData) {
+          console.log('License found on server, updating local state:', licenseData);
+          const expiryDate = new Date(licenseData.expiry_date).getTime();
+          const isActive = licenseData.status === 'active' && 
+                          (licenseData as any).is_active !== false && 
                           !isShopBlocked;
           
           const license = await this.getLocalLicense();
@@ -133,11 +152,11 @@ export class LicenseService {
         } else {
           console.log(`No license record found on server for shopId: ${shopId}. Setting local state to inactive.`);
           const license = await this.getLocalLicense();
-          // Explicitly set to inactive and 0 expiry if no record exists on server
-          const signature = EncryptionUtils.generateSignature(`${license.deviceId}-0-false`);
+          // Explicitly set to inactive and -1 expiry to indicate "No Record Found"
+          const signature = EncryptionUtils.generateSignature(`${license.deviceId}--1-false`);
           
           await db.license.update(1, {
-            expiryDate: 0,
+            expiryDate: -1,
             isActive: false,
             lastVerifiedAt: Date.now(),
             signature
@@ -160,7 +179,7 @@ export class LicenseService {
 
   static async syncLicense() {
     const now = Date.now();
-    const MAX_SYNC_TIME = 30000; // 30s
+    const MAX_SYNC_TIME = 60000; // Increased to 60s to allow for retries
     
     if (this.isSyncing && now - this.lastSyncAttempt > MAX_SYNC_TIME) {
       console.warn('License sync stuck. Resetting...');
@@ -169,13 +188,17 @@ export class LicenseService {
     }
 
     if (this.isSyncing) {
-      console.log('License sync already in progress, waiting...');
+      // Only log every 30s to reduce noise
+      if (!this.lastSyncLog || now - this.lastSyncLog > 30000) {
+        console.log('License sync already in progress, waiting...');
+        this.lastSyncLog = now;
+      }
       return this.currentSyncPromise || Promise.resolve();
     }
     
     const user = useStore.getState().user;
-    if (!user || !navigator.onLine) {
-      console.log('License sync skipped: User not logged in or offline');
+    if (!user) {
+      console.log('License sync skipped: User not logged in');
       return;
     }
 
@@ -183,7 +206,7 @@ export class LicenseService {
     const shopId = user.shop_id || user.shopId;
     
     if (!shopId) {
-      console.warn('License sync skipped: Could not determine shopId for user', user.id);
+      console.warn('License sync skipped: Could not determine shopId for user', user.id, user);
       return;
     }
 
@@ -194,10 +217,6 @@ export class LicenseService {
       console.log(`Starting license sync process for shop: ${shopId}...`);
       
       try {
-        // Check online status again inside the promise
-        if (!navigator.onLine) {
-          throw new Error('No internet connection');
-        }
         await this.syncWithRetry(shopId, 3);
         console.log('License sync completed successfully');
       } catch (err: any) {
@@ -210,5 +229,12 @@ export class LicenseService {
     })();
 
     return this.currentSyncPromise;
+  }
+
+  static resetSync() {
+    this.isSyncing = false;
+    this.lastSyncAttempt = 0;
+    this.currentSyncPromise = null;
+    console.log('License sync state reset manually');
   }
 }

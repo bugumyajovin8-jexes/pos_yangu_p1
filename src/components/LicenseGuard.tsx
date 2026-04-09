@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { LicenseService, LicenseStatus } from '../services/license';
-import { AlertTriangle, Wifi, Lock, CalendarX } from 'lucide-react';
+import { AlertTriangle, Wifi, Lock, CalendarX, RefreshCw } from 'lucide-react';
 import { useStore } from '../store';
 
 export default function LicenseGuard({ children }: { children: React.ReactNode }) {
   const user = useStore(state => state.user);
   const [status, setStatus] = useState<LicenseStatus>('VALID');
   const [daysRemaining, setDaysRemaining] = useState<number>(14);
+  const [expiryDate, setExpiryDate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
@@ -18,6 +19,7 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
       const res = await LicenseService.checkStatus();
       setStatus(res.status);
       setDaysRemaining(res.daysRemaining);
+      setExpiryDate(res.expiryDate);
       
       // If we are already valid, we can stop loading early
       if (res.status === 'VALID' && !forceSync) {
@@ -32,6 +34,7 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
           const afterSync = await LicenseService.checkStatus();
           setStatus(afterSync.status);
           setDaysRemaining(afterSync.daysRemaining);
+          setExpiryDate(afterSync.expiryDate);
         } catch (err: any) {
           // Ignore lock contention errors as they are handled by the service's internal retry/silence logic
           if (!err.message?.includes('AbortError') && !err.message?.includes('Lock broken')) {
@@ -86,6 +89,7 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
     let icon = <Lock className="w-16 h-16 text-red-500 mb-4" />;
     let title = t('accountLocked');
     let message = t('contactAdmin').replace('{phone}', '0787979273');
+    let reason = '';
 
     if (status === 'EXPIRED') {
       icon = <CalendarX className="w-16 h-16 text-red-500 mb-4" />;
@@ -103,22 +107,55 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
       message = status === 'TAMPERED' 
         ? t('tamperedDataDesc')
         : t('fixDateDesc');
+    } else if (status === 'BLOCKED') {
+      reason = expiryDate === -1 ? 'No license record found on server' : 'Shop status is blocked';
+    } else if (status === 'SYNC_REQUIRED') {
+      reason = 'License synchronization required';
     }
 
     return (
       <div className="h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
         {icon}
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
-        <p className="text-gray-600 mb-8 leading-relaxed">{message}</p>
+        <p className="text-gray-600 mb-4 leading-relaxed">{message}</p>
         
-        <button 
-          onClick={() => check(true)}
-          disabled={syncing}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-8 py-3 rounded-xl font-bold transition-colors flex items-center gap-2"
-        >
-          <Wifi className={`w-5 h-5 ${syncing ? 'animate-pulse' : ''}`} />
-          {syncing ? t('verifying') : t('verifyLicenseNow')}
-        </button>
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-8 max-w-sm w-full text-left">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Debug Information</p>
+          <div className="space-y-2">
+            <div>
+              <p className="text-[10px] text-slate-500">Shop ID:</p>
+              <p className="text-xs font-mono text-slate-700 break-all">{user?.shop_id || user?.shopId || 'Not found'}</p>
+            </div>
+            {reason && (
+              <div>
+                <p className="text-[10px] text-slate-500">Reason:</p>
+                <p className="text-xs font-medium text-red-600">{reason}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex flex-col gap-3 w-full max-w-sm">
+          <button 
+            onClick={() => check(true)}
+            disabled={syncing}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-8 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+          >
+            <Wifi className={`w-5 h-5 ${syncing ? 'animate-pulse' : ''}`} />
+            {syncing ? t('verifying') : t('verifyLicenseNow')}
+          </button>
+
+          <button 
+            onClick={() => {
+              LicenseService.resetSync();
+              check(true);
+            }}
+            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 px-8 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            {t('resetSync')}
+          </button>
+        </div>
       </div>
     );
   }
