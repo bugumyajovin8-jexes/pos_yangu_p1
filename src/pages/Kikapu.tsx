@@ -428,6 +428,7 @@ export default function Kikapu() {
                         <input
                           type="number"
                           value={item.qty}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => {
                             const val = parseInt(e.target.value);
                             if (!isNaN(val)) {
