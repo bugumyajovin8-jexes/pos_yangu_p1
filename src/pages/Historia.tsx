@@ -28,8 +28,7 @@ export default function Historia() {
   const t = useStore(state => state.t);
   const showAlert = useStore(state => state.showAlert);
   const showConfirm = useStore(state => state.showConfirm);
-  const { isFeatureEnabled, isBoss } = useFeatureToggles();
-  const canRefund = isFeatureEnabled('staff_refund_management') || isBoss();
+  const canRefund = true;
   const [shopSettings, setShopSettings] = useState<any>(null);
   const [view, setView] = useState<'risiti' | 'ripoti'>('risiti');
   const [filter, setFilter] = useState('leo');
