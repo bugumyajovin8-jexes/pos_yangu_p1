@@ -186,9 +186,30 @@ export default function ImportExcelModal({ isOpen, onClose }: ImportExcelModalPr
           const rawValue = String(value || '').replace(/,/g, '').trim();
           value = rawValue === '' ? null : parseFloat(rawValue);
         } else if (field.type === 'date' && value) {
+          // Smart Date Parsing
           if (typeof value === 'number') {
+            // Excel numeric date
             const date = new Date((value - 25569) * 86400 * 1000);
             value = date.toISOString().split('T')[0];
+          } else {
+            const str = String(value).trim();
+            if (str) {
+              // Try native parsing first (handles YYYY-MM-DD and ISO)
+              let date = new Date(str);
+              
+              // If native fails, try common formats like DD/MM/YYYY
+              if (isNaN(date.getTime())) {
+                // Try DD/MM/YYYY or DD-MM-YYYY
+                const dmy = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+                if (dmy) {
+                  date = new Date(`${dmy[3]}-${dmy[2]}-${dmy[1]}`);
+                }
+              }
+
+              value = !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
+            } else {
+              value = '';
+            }
           }
         }
         rowData[field.key] = value;
