@@ -43,7 +43,7 @@ export class LicenseService {
   static async checkStatus(): Promise<{ status: LicenseStatus, daysRemaining: number, expiryDate: number }> {
     const license = await this.getLocalLicense();
     const now = Date.now();
-    const fiveDays = 5 * 24 * 60 * 60 * 1000;
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
     const daysRemaining = Math.ceil((license.expiryDate - now) / (24 * 60 * 60 * 1000));
 
     // Verify signature to prevent manual IndexedDB tampering
@@ -69,8 +69,8 @@ export class LicenseService {
     
     if (now > license.expiryDate) return { status: 'EXPIRED', daysRemaining, expiryDate: license.expiryDate };
     
-    // If it's been more than 5 days since the last sync, require a sync
-    if (now - license.lastVerifiedAt > fiveDays) return { status: 'SYNC_REQUIRED', daysRemaining, expiryDate: license.expiryDate };
+    // If it's been more than 30 days since the last sync, require a sync
+    if (now - license.lastVerifiedAt > thirtyDays) return { status: 'SYNC_REQUIRED', daysRemaining, expiryDate: license.expiryDate };
 
     // Update lastVerifiedAt locally to track time progress.
     // Only update if the current time is actually later than the stored time.

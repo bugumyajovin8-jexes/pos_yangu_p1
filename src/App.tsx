@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useStore } from './store';
 import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
@@ -271,63 +271,75 @@ export default function App() {
     );
   }
 
-  const needsShopSetup = !user?.shop_id;
-
   return (
     <LicenseGuard>
       <BrowserRouter>
-        <NetworkStatus />
-        <GlobalModal />
-        <div className="flex h-screen bg-slate-50 overflow-hidden">
-          {!needsShopSetup && <Sidebar />}
-
-          <main className={`flex-1 bg-slate-50 pb-20 md:pb-0 ${window.location.pathname === '/kikapu' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-            {!needsShopSetup && (
-              <header className="md:hidden bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-40 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden">
-                    <img src="/logo.png" alt="Venics Sales" className="w-full h-full object-cover" onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                    }} />
-                    <Store className="w-5 h-5 text-white hidden" />
-                  </div>
-                  <h1 className="font-bold text-gray-900">Venics Sales</h1>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">
-                    {user?.name?.charAt(0) || 'U'}
-                  </div>
-                </div>
-              </header>
-            )}
-            <div className={`${window.location.pathname === '/kikapu' ? 'max-w-none' : 'max-w-7xl'} mx-auto h-full`}>
-              <Routes>
-                {needsShopSetup ? (
-                  <>
-                    <Route path="/setup-shop" element={<SetupShop />} />
-                    <Route path="*" element={<Navigate to="/setup-shop" replace />} />
-                  </>
-                ) : (
-                  <>
-                    <Route path="/" element={<Dashibodi />} />
-                    <Route path="/bidhaa" element={<Bidhaa />} />
-                    <Route path="/kikapu" element={<Kikapu />} />
-                    <Route path="/madeni" element={<Madeni />} />
-                    <Route path="/historia" element={<Historia />} />
-                    <Route path="/matumizi" element={<Matumizi />} />
-                    <Route path="/expiry" element={<Expiry />} />
-                    <Route path="/zaidi" element={<Zaidi />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </>
-                )}
-              </Routes>
-            </div>
-          </main>
-          {!needsShopSetup && <BottomNav />}
-        </div>
+        <AppContent />
       </BrowserRouter>
     </LicenseGuard>
+  );
+}
+
+function AppContent() {
+  const user = useStore(state => state.user);
+  const needsShopSetup = !user?.shop_id;
+  const logout = useStore(state => state.logout);
+  const location = useLocation();
+  const isKikapu = location.pathname === '/kikapu';
+
+  return (
+    <>
+      <NetworkStatus />
+      <GlobalModal />
+      <div className="flex h-screen bg-slate-50 overflow-hidden">
+        {!needsShopSetup && !isKikapu && <Sidebar />}
+
+        <main className={`flex-1 bg-slate-50 pb-20 md:pb-0 ${isKikapu ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          {!needsShopSetup && (
+            <header className="md:hidden bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-40 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden">
+                  <img src="/logo.png" alt="Venics Sales" className="w-full h-full object-cover" onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }} />
+                  <Store className="w-5 h-5 text-white hidden" />
+                </div>
+                <h1 className="font-bold text-gray-900">Venics Sales</h1>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">
+                  {user?.name?.charAt(0) || 'U'}
+                </div>
+              </div>
+            </header>
+          )}
+          <div className={`${isKikapu ? 'max-w-none' : 'max-w-7xl'} mx-auto h-full`}>
+            <Routes>
+              {needsShopSetup ? (
+                <>
+                  <Route path="/setup-shop" element={<SetupShop />} />
+                  <Route path="*" element={<Navigate to="/setup-shop" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/" element={<Dashibodi />} />
+                  <Route path="/bidhaa" element={<Bidhaa />} />
+                  <Route path="/kikapu" element={<Kikapu />} />
+                  <Route path="/madeni" element={<Madeni />} />
+                  <Route path="/historia" element={<Historia />} />
+                  <Route path="/matumizi" element={<Matumizi />} />
+                  <Route path="/expiry" element={<Expiry />} />
+                  <Route path="/zaidi" element={<Zaidi />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              )}
+            </Routes>
+          </div>
+        </main>
+        {!needsShopSetup && !isKikapu && <BottomNav />}
+      </div>
+    </>
   );
 }
 

@@ -273,7 +273,11 @@ export class SyncService {
       return;
     }
 
-    console.log(`Pulled ${data?.length || 0} records for ${tableName}`);
+    if (tableName === 'features') {
+      console.log(`[Sync] Pulled ${data?.length || 0} features from Supabase for shop ${shopId}:`, data);
+    } else {
+      console.log(`Pulled ${data?.length || 0} records for ${tableName}`);
+    }
     if (data && data.length > 0) {
       const ids = data.map((r: any) => r.id);
       const existingRecords = await table.bulkGet(ids) as any[];

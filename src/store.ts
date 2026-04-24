@@ -54,19 +54,24 @@ interface PosState {
 export const useStore = create<PosState>((set, get) => ({
   cart: [],
   addToCart: (product) => set((state) => {
-    const existing = state.cart.find(item => item.id === product.id);
-    if (existing) {
-      if (existing.qty >= product.stock) {
+    const existingIndex = state.cart.findIndex(item => item.id === product.id);
+    
+    if (existingIndex > -1) {
+      const existingItem = state.cart[existingIndex];
+      if (existingItem.qty >= product.stock) {
         return state;
       }
+      
+      // Remove it from current position and put updated at the top
+      const otherItems = state.cart.filter(item => item.id !== product.id);
       return {
-        cart: state.cart.map(item => 
-          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-        )
+        cart: [{ ...existingItem, qty: existingItem.qty + 1 }, ...otherItems]
       };
     }
+    
     if (product.stock <= 0) return state;
-    return { cart: [...state.cart, { ...product, qty: 1 }] };
+    // Add new item at the top
+    return { cart: [{ ...product, qty: 1 }, ...state.cart] };
   }),
   removeFromCart: (productId) => set((state) => ({
     cart: state.cart.filter(item => item.id !== productId)
@@ -125,14 +130,16 @@ export const useStore = create<PosState>((set, get) => ({
   isFeatureEnabled: (featureKey: string) => {
     const state = get();
     const user = state.user;
-    if (user && ['admin', 'boss', 'superadmin', 'owner'].includes(user.role)) return true;
+    if (user && ['admin', 'boss', 'superadmin', 'owner'].includes(user.role)) {
+      return true;
+    }
     
-    // Find feature by key (handle both camelCase and snake_case just in case)
+    // Find feature by key
     const feature = state.features.find(f => f.featureKey === featureKey || (f as any).feature_key === featureKey);
     
     if (!feature) return false;
     
-    // Robust boolean check (handles true, "true", 1, "1")
+    // Robust boolean check
     const isEnabled = feature.isEnabled === true || 
                      (feature.isEnabled as any) === 1 || 
                      String(feature.isEnabled).toLowerCase() === 'true' ||

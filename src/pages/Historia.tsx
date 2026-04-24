@@ -33,6 +33,7 @@ export default function Historia() {
   const [view, setView] = useState<'risiti' | 'ripoti'>('risiti');
   const [filter, setFilter] = useState('leo');
   const [reportType, setReportType] = useState<'mwezi' | 'mwaka'>('mwezi');
+  const isAdmin = ['admin', 'boss', 'superadmin', 'owner'].includes(user?.role || '');
 
   const daysToLoad = useMemo(() => {
     switch(filter) {
@@ -51,8 +52,8 @@ export default function Historia() {
   const { data: expenses, loading: expensesLoading } = useSupabaseData<any>('expenses', { days: daysToLoad, allTime: filter === 'yote' });
 
   // All-time totals for safe display when "yote" is selected
-  const { total: allTimeRevenue } = useSupabaseTotals('sales', 'total_amount', user?.id);
-  const { total: allTimeExpenses } = useSupabaseTotals('expenses', 'amount', user?.id);
+  const { total: allTimeRevenue } = useSupabaseTotals('sales', 'total_amount', isAdmin ? undefined : user?.id);
+  const { total: allTimeExpenses } = useSupabaseTotals('expenses', 'amount', isAdmin ? undefined : user?.id);
 
   const handleReverseSale = async (sale: any) => {
     if (!canRefund) {
@@ -126,12 +127,14 @@ export default function Historia() {
   };
 
   const startDate = getStartDate();
-  const mySales = sales.filter(s => s.user_id === user?.id);
+  // Boss sees all shop sales, Staff sees only their own
+  const mySales = sales.filter(s => isAdmin ? true : s.user_id === user?.id);
+  
   const filteredSales = mySales
     .filter(s => !s.is_deleted && new Date(s.created_at).getTime() >= startDate && s.status !== 'cancelled')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  const myExpenses = expenses.filter(e => e.user_id === user?.id);
+  const myExpenses = expenses.filter(e => isAdmin ? true : e.user_id === user?.id);
   const filteredExpenses = myExpenses
     .filter(e => !e.is_deleted && new Date(e.created_at).getTime() >= startDate);
 

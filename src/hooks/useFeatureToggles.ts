@@ -21,10 +21,21 @@ export function useFeatureToggles() {
 
   const isFeatureEnabled = (featureKey: string) => {
     // Check if user is a boss first
-    if (isBoss()) return true;
+    if (isBoss()) {
+      console.log(`[Feature] ${featureKey}: ENABLED (User is Boss)`);
+      return true;
+    }
+
+    const shopId = user?.shop_id || user?.shopId;
+    if (!shopId) {
+      console.warn(`[Feature] ${featureKey}: DISABLED (No shop_id found for user)`, user);
+      return false;
+    }
 
     // Check the live features array from Dexie
-    const feature = features.find(f => f.featureKey === featureKey || (f as any).feature_key === featureKey);
+    const feature = features.find(f => 
+      (f.featureKey === featureKey || (f as any).feature_key === featureKey)
+    );
     
     if (feature) {
       // Robust boolean check (handles true, "true", 1, "1")
@@ -33,13 +44,13 @@ export function useFeatureToggles() {
                         String(feature.isEnabled).toLowerCase() === 'true' ||
                         String(feature.isEnabled) === '1';
       
-      console.log(`Feature check: ${featureKey} = ${isEnabled}`, feature);
+      console.log(`[Feature] ${featureKey}: ${isEnabled ? 'ENABLED' : 'DISABLED'} (From DB)`, { feature, shopId });
       return isEnabled;
     }
 
     // Fallback to store if Dexie query hasn't finished or is empty
     const storeEnabled = storeIsFeatureEnabled(featureKey);
-    console.log(`Feature check (fallback): ${featureKey} = ${storeEnabled}`);
+    console.log(`[Feature] ${featureKey}: ${storeEnabled ? 'ENABLED' : 'DISABLED'} (From Store Fallback)`);
     return storeEnabled;
   };
 

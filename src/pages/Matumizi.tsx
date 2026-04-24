@@ -158,6 +158,7 @@ export default function Matumizi() {
                   required 
                   type="text" 
                   value={formAmount}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setFormAmount(formatNumberWithCommas(e.target.value))}
                   className="w-full pl-10 p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                   placeholder="0" 

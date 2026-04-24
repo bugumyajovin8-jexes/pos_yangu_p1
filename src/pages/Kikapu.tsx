@@ -3,8 +3,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useStore } from '../store';
 import { formatCurrency } from '../utils/format';
 import { getValidStock } from '../utils/stock';
-import { Plus, Minus, Trash2, Search, ShoppingBag, CreditCard, User, Calendar, RefreshCw, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, ShoppingBag, CreditCard, User, Calendar, RefreshCw, CheckCircle2, ArrowLeft, Home } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { useNavigate } from 'react-router-dom';
 import { db, recordAuditLog } from '../db';
 import { SyncService } from '../services/sync';
 import { useSupabaseData } from '../hooks/useSupabaseData';
@@ -13,6 +14,7 @@ import { differenceInDays, parseISO } from 'date-fns';
 export default function Kikapu() {
   const user = useStore(state => state.user);
   const t = useStore(state => state.t);
+  const navigate = useNavigate();
   const [shopSettings, setShopSettings] = useState<any>(null);
   const { data: allSales } = useSupabaseData<any>('sales');
   
@@ -20,7 +22,12 @@ export default function Kikapu() {
   
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
   const [isCheckout, setIsCheckout] = useState(false);
+
+  const alphabet = useMemo(() => {
+    return ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -83,6 +90,15 @@ export default function Kikapu() {
         filtered = activeProducts.filter(p => p.name.toLowerCase().includes(s));
       }
 
+      // Filter by alphabet
+      if (selectedLetter) {
+        if (selectedLetter === '#') {
+          filtered = filtered.filter(p => /^\d/.test(p.name));
+        } else {
+          filtered = filtered.filter(p => p.name.toUpperCase().startsWith(selectedLetter));
+        }
+      }
+
       // Sort: Starts with search term first, then alphabetical
       return filtered
         .sort((a, b) => {
@@ -100,7 +116,7 @@ export default function Kikapu() {
         })
         .slice(0, 100);
     },
-    [user?.shop_id, debouncedSearch]
+    [user?.shop_id, debouncedSearch, selectedLetter]
   ) || [];
 
   const handleSelectCustomer = (name: string) => {
@@ -266,39 +282,72 @@ export default function Kikapu() {
     <div className="flex h-full bg-slate-50 overflow-hidden relative">
       {/* Left Side: Product Selection */}
       <div className="flex-1 flex flex-col border-r border-slate-200 bg-white min-w-0 h-full">
-        <div className="p-4 md:p-6 border-b border-slate-100 flex-shrink-0">
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 mb-4">{t('selectProducts')}</h1>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+        <div className="px-3 py-2 border-b border-slate-100 flex-shrink-0 flex items-center space-x-3">
+          <button 
+            onClick={() => navigate('/')}
+            className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm flex-shrink-0"
+            title={t('dashboard')}
+          >
+            <Home className="w-5 h-5" />
+          </button>
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input 
               type="text" 
               placeholder={t('searchProductsPlaceholder')} 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
             />
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6 items-start">
+        {/* Alphabet Filter */}
+        <div className="bg-white border-b border-slate-100 flex-shrink-0 flex items-center overflow-x-auto no-scrollbar py-1 px-2 md:px-4 space-x-1 scroll-smooth">
+          <button
+            onClick={() => setSelectedLetter(null)}
+            className={`flex-shrink-0 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+              selectedLetter === null 
+                ? 'bg-blue-600 text-white shadow-sm' 
+                : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            {t('all')}
+          </button>
+          {alphabet.map(letter => (
+            <button
+              key={letter}
+              onClick={() => setSelectedLetter(letter === selectedLetter ? null : letter)}
+              className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-[10px] font-bold transition-all ${
+                selectedLetter === letter 
+                  ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-600/20' 
+                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+              }`}
+            >
+              {letter}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-2 md:p-3 bg-slate-50/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-3 items-start">
             {filteredProducts.map(product => (
               <button 
                 key={product.id} 
                 onClick={() => addToCart({ ...product, stock: product.stock })}
-                className="group bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-500 hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col h-full min-h-[120px]"
+                className="group bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm hover:border-blue-500 hover:shadow-md transition-all text-left relative overflow-hidden flex flex-col h-full min-h-[110px]"
               >
-                <div className="absolute top-0 right-0 p-2 opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <div className="bg-blue-600 text-white p-1.5 rounded-lg">
-                    <Plus className="w-4 h-4" />
+                <div className="absolute top-0 right-0 p-1.5 opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <div className="bg-blue-600 text-white p-1 rounded-lg">
+                    <Plus className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-slate-900 mb-1 text-sm md:text-base line-clamp-2 leading-tight">{product.name}</h3>
-                  <p className="text-lg font-black text-blue-600 mt-auto">{formatCurrency(product.sell_price, currency)}</p>
+                  <h3 className="font-bold text-slate-900 mb-1 text-xs md:text-sm line-clamp-2 leading-tight pr-4">{product.name}</h3>
+                  <p className="text-base md:text-lg font-black text-blue-600 mt-auto">{formatCurrency(product.sell_price, currency)}</p>
                 </div>
-                <div className="mt-4 flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-50 pt-3">
-                  <span className={`w-2 h-2 rounded-full mr-2 ${product.stock < 10 ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
+                <div className="mt-3 flex items-center text-[9px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-50 pt-2">
+                  <span className={`w-1.5 h-1.5 rounded-full mr-2 ${product.stock < 10 ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
                   {t('stock')}: {product.stock}
                 </div>
               </button>

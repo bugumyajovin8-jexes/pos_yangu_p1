@@ -19,6 +19,8 @@ export default function Dashibodi() {
   const { isFeatureEnabled } = useFeatureToggles();
   const canManageProducts = isFeatureEnabled('staff_product_management');
 
+  const isAdmin = ['admin', 'boss', 'superadmin', 'owner'].includes(user?.role || '');
+
   const { data: sales, loading: salesLoading } = useSupabaseData<any>('sales', { allTime: true });
   const { data: products, loading: productsLoading } = useSupabaseData<any>('products');
   const { data: expenses, loading: expensesLoading } = useSupabaseData<any>('expenses', { days: 60 });
@@ -52,12 +54,16 @@ export default function Dashibodi() {
   const monthStart = startOfMonth(now).getTime();
   const lastMonthStart = startOfMonth(subMonths(now, 1)).getTime();
 
-  const mySales = sales.filter(s => s.user_id === user?.id);
-  const todaySales = mySales.filter(s => !s.is_deleted && new Date(s.created_at).getTime() >= todayStart && s.status !== 'cancelled');
-  const monthSales = mySales.filter(s => !s.is_deleted && new Date(s.created_at).getTime() >= monthStart && s.status !== 'cancelled');
+  // Boss sees all shop sales, Staff sees only their own
+  const mySales = sales.filter(s => isAdmin ? true : s.user_id === user?.id);
+
+  const isActiveSale = (s: any) => !s.is_deleted && s.status !== 'cancelled' && s.status !== 'refunded';
+
+  const todaySales = mySales.filter(s => isActiveSale(s) && new Date(s.created_at).getTime() >= todayStart);
+  const monthSales = mySales.filter(s => isActiveSale(s) && new Date(s.created_at).getTime() >= monthStart);
   const lastMonthSales = mySales.filter(s => {
     const saleTime = new Date(s.created_at).getTime();
-    return !s.is_deleted && saleTime >= lastMonthStart && saleTime < monthStart && s.status !== 'cancelled';
+    return isActiveSale(s) && saleTime >= lastMonthStart && saleTime < monthStart;
   });
 
   const calcTotal = (arr: any[]) => arr.reduce((sum, s) => sum + s.total_amount, 0);
@@ -108,7 +114,7 @@ export default function Dashibodi() {
     const dayEnd = dayStart + 86400000;
     const daySales = mySales.filter(s => {
       const saleTime = new Date(s.created_at).getTime();
-      return !s.is_deleted && saleTime >= dayStart && saleTime < dayEnd && s.status !== 'cancelled';
+      return isActiveSale(s) && saleTime >= dayStart && saleTime < dayEnd;
     });
     return {
       name: d.toLocaleDateString(useStore.getState().language === 'sw' ? 'sw-TZ' : 'en-US', { weekday: 'short' }),
@@ -117,7 +123,7 @@ export default function Dashibodi() {
   });
 
   const totalDebt = sales
-    .filter(s => !s.is_deleted && s.payment_method === 'credit' && s.status !== 'cancelled')
+    .filter(s => !s.is_deleted && s.payment_method === 'credit' && s.status !== 'cancelled' && s.status !== 'refunded')
     .reduce((sum, s) => {
       const payments = debtPayments.filter(p => p.sale_id === s.id);
       const amountPaid = payments.reduce((pSum, p) => pSum + p.amount, 0);

@@ -350,6 +350,7 @@ export default function Bidhaa() {
                   required 
                   type="text" 
                   value={formBuyPrice}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setFormBuyPrice(formatNumberWithCommas(e.target.value))}
                   className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                 />
@@ -360,6 +361,7 @@ export default function Bidhaa() {
                   required 
                   type="text" 
                   value={formSellPrice}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setFormSellPrice(formatNumberWithCommas(e.target.value))}
                   className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                 />
@@ -373,6 +375,7 @@ export default function Bidhaa() {
                   required 
                   type="text" 
                   value={formStock}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setFormStock(formatNumberWithCommas(e.target.value))}
                   className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                 />
@@ -397,6 +400,7 @@ export default function Bidhaa() {
                   required 
                   type="text" 
                   value={formMinStock}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setFormMinStock(formatNumberWithCommas(e.target.value))}
                   className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                 />
@@ -637,6 +641,7 @@ export default function Bidhaa() {
                   type="text"
                   placeholder="Mfano: 10"
                   value={stockToAdd}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setStockToAdd(formatNumberWithCommas(e.target.value))}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-xl font-bold mb-4"
                 />
