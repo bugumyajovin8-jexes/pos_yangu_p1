@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useStore } from '../store';
 import { formatCurrency } from '../utils/format';
 import { getValidStock } from '../utils/stock';
-import { Plus, Minus, Trash2, Search, ShoppingBag, CreditCard, User, Calendar, RefreshCw, CheckCircle2, ArrowLeft, Home } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, ShoppingBag, CreditCard, User, Calendar, RefreshCw, CheckCircle2, ArrowLeft, Home, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from 'react-router-dom';
 import { db, recordAuditLog } from '../db';
@@ -41,6 +41,11 @@ export default function Kikapu() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCartMobile, setShowCartMobile] = useState(false);
   const processingRef = useRef(false);
+
+  const [customTotal, setCustomTotal] = useState<string>('');
+  const [showDiscountInput, setShowDiscountInput] = useState(false);
+  
+  const finalTotalValue = customTotal !== '' && !isNaN(parseInt(customTotal)) ? parseInt(customTotal) : cartTotal();
 
   useEffect(() => {
     if (user?.shop_id) {
@@ -153,12 +158,15 @@ export default function Kikapu() {
           }
         }
 
+        const totalBuyPrice = cartTotal() - cartProfit();
+        const finalProfitVal = finalTotalValue - totalBuyPrice;
+
         const sale = {
           id: saleId,
           shop_id: user.shop_id || user.shopId || '',
           user_id: user.id,
-          total_amount: cartTotal(),
-          total_profit: cartProfit(),
+          total_amount: finalTotalValue,
+          total_profit: finalProfitVal,
           payment_method: method,
           status: method === 'credit' ? 'pending' : 'completed',
           customer_name: method === 'credit' ? customerName : undefined,
@@ -190,14 +198,18 @@ export default function Kikapu() {
         // 2. Insert Sale Items
         await db.saleItems.bulkAdd(saleItems);
 
-        // Record Audit Log
-        await recordAuditLog('complete_sale', {
-          sale_id: saleId,
-          total_amount: sale.total_amount,
-          payment_method: method,
-          items_count: cart.length,
-          customer_name: customerName || undefined
-        });
+        const originalTotal = cartTotal();
+        if (finalTotalValue < originalTotal) {
+          await recordAuditLog('discounted_sale', {
+            sale_id: saleId,
+            number_of_items_sold: cart.reduce((sum, item) => sum + item.qty, 0),
+            original_price: originalTotal,
+            price_on_discount: finalTotalValue,
+            name_of_person_who_sold: user?.name,
+            name_of_product: cart.map(item => item.name).join(', '),
+            time: new Date().toISOString()
+          });
+        }
 
         // 3. Update Stocks locally (FEFO - First Expired, First Out)
         for (const item of cart) {
@@ -260,6 +272,8 @@ export default function Kikapu() {
       setCustomerName('');
       setCustomerPhone('');
       setDueDate('');
+      setCustomTotal('');
+      setShowDiscountInput(false);
       SyncService.sync(true).catch(err => console.error('Checkout sync failed:', err));
       
     } catch (error: any) {
@@ -373,7 +387,7 @@ export default function Kikapu() {
           </div>
           <div className="text-left">
             <p className="text-[10px] uppercase font-bold opacity-80 leading-none mb-1">{t('payNow')}</p>
-            <p className="font-black text-sm leading-none">{formatCurrency(cartTotal(), currency)}</p>
+            <p className="font-black text-sm leading-none">{formatCurrency(finalTotalValue, currency)}</p>
           </div>
         </button>
       )}
@@ -522,21 +536,54 @@ export default function Kikapu() {
               <span>{t('totalPayment')}</span>
             </div>
             <div className="flex justify-between items-end">
-              <span className="text-slate-900 font-black text-2xl md:text-3xl">{formatCurrency(cartTotal(), currency)}</span>
+              <div className="flex flex-col">
+                {customTotal !== '' && !isNaN(parseInt(customTotal)) && (
+                  <span className="text-slate-400 font-bold text-sm line-through mb-1">{formatCurrency(cartTotal(), currency)}</span>
+                )}
+                <span className="text-slate-900 font-black text-2xl md:text-3xl">{formatCurrency(finalTotalValue, currency)}</span>
+              </div>
               <span className="text-slate-400 text-[10px] md:text-xs font-bold mb-1">{cart.reduce((sum, item) => sum + item.qty, 0)} {t('items')}</span>
             </div>
           </div>
 
           {!isCheckout ? (
             <div className="flex flex-col space-y-3">
-              <button 
-                onClick={() => handleCompleteSale('cash')}
-                disabled={cart.length === 0 || isProcessing}
-                className="w-full bg-emerald-600 disabled:bg-slate-200 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center space-x-3"
-              >
-                {isProcessing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                <span>{t('completeSaleCash')}</span>
-              </button>
+              <div className="flex space-x-3">
+                {showDiscountInput ? (
+                  <div className="flex-1 relative flex items-center">
+                    <input 
+                      type="number"
+                      autoFocus
+                      placeholder="Bei mpya"
+                      value={customTotal}
+                      onChange={e => setCustomTotal(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-blue-200 rounded-2xl py-3.5 pl-3 pr-8 font-bold text-slate-900 focus:border-blue-500 focus:ring-0 outline-none text-sm"
+                    />
+                    <button 
+                      onClick={() => { setShowDiscountInput(false); setCustomTotal(''); }}
+                      className="absolute right-2 p-1.5 text-slate-400 hover:text-rose-500 rounded-lg"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => setShowDiscountInput(true)}
+                    disabled={cart.length === 0 || isProcessing}
+                    className="flex-1 bg-slate-100 disabled:bg-slate-50 text-slate-600 font-bold py-4 rounded-2xl hover:bg-slate-200 transition-all text-sm shadow-sm"
+                  >
+                    Punguzo
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleCompleteSale('cash')}
+                  disabled={cart.length === 0 || isProcessing}
+                  className="flex-[1.5] bg-emerald-600 disabled:bg-slate-200 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center space-x-2 px-2 text-sm"
+                >
+                  {isProcessing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                  <span className="truncate">{t('completeSaleCash')}</span>
+                </button>
+              </div>
               <button 
                 onClick={() => { setIsCredit(true); setIsCheckout(true); }}
                 disabled={cart.length === 0 || isProcessing}

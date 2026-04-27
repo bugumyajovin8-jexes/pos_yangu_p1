@@ -197,6 +197,11 @@ export class SyncService {
     // Only fetch records where synced = 0 (Not Sent)
     const unsynced = await table.where('synced').equals(0).toArray();
     
+    if (tableName === 'audit_logs') {
+      console.log('pushTable for audit_logs called! unsynced length:', unsynced.length);
+      console.log('unsynced records for audit_logs:', unsynced);
+    }
+
     if (unsynced.length === 0) return;
 
     console.log(`Pushing ${unsynced.length} unsynced records for ${tableName}`);
@@ -233,6 +238,10 @@ export class SyncService {
       const { synced, ...localData } = record;
       return this.mapToRemote(tableName, localData);
     });
+
+    if (tableName === 'audit_logs') {
+      console.log('Sending audit_logs to Supabase:', itemsToUpsert);
+    }
 
     const { error: upsertError } = await supabase
       .from(tableName)
