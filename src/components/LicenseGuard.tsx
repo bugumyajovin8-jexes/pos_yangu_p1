@@ -89,8 +89,6 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
     let icon = <Lock className="w-16 h-16 text-red-500 mb-4" />;
     let title = t('accountLocked');
     let message = t('contactAdmin').replace('{phone}', '0787979273');
-    let reason = '';
-
     if (status === 'EXPIRED') {
       icon = <CalendarX className="w-16 h-16 text-red-500 mb-4" />;
       title = t('licenseExpired');
@@ -107,10 +105,6 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
       message = status === 'TAMPERED' 
         ? t('tamperedDataDesc')
         : t('fixDateDesc');
-    } else if (status === 'BLOCKED') {
-      reason = expiryDate === -1 ? 'No license record found on server' : 'Shop status is blocked';
-    } else if (status === 'SYNC_REQUIRED') {
-      reason = 'License synchronization required';
     }
 
     return (
@@ -118,22 +112,6 @@ export default function LicenseGuard({ children }: { children: React.ReactNode }
         {icon}
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
         <p className="text-gray-600 mb-4 leading-relaxed">{message}</p>
-        
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-8 max-w-sm w-full text-left">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Debug Information</p>
-          <div className="space-y-2">
-            <div>
-              <p className="text-[10px] text-slate-500">Shop ID:</p>
-              <p className="text-xs font-mono text-slate-700 break-all">{user?.shop_id || user?.shopId || 'Not found'}</p>
-            </div>
-            {reason && (
-              <div>
-                <p className="text-[10px] text-slate-500">Reason:</p>
-                <p className="text-xs font-medium text-red-600">{reason}</p>
-              </div>
-            )}
-          </div>
-        </div>
         
         <div className="flex flex-col gap-3 w-full max-w-sm">
           <button 
